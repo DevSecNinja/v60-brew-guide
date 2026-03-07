@@ -852,13 +852,24 @@
         return false;
       }
 
+      // If a wake lock is already held, do not request another one
+      if (wakeLock !== null) {
+        console.debug('Wake Lock already held');
+        return true;
+      }
+
       try {
-        wakeLock = await navigator.wakeLock.request('screen');
+        const currentWakeLock = await navigator.wakeLock.request('screen');
+        wakeLock = currentWakeLock;
         console.debug('Wake Lock acquired');
         
         // Listen for wake lock release (e.g., tab becomes hidden)
-        wakeLock.addEventListener('release', () => {
+        currentWakeLock.addEventListener('release', () => {
           console.debug('Wake Lock released');
+          // Only clear the global if it still refers to this sentinel
+          if (wakeLock === currentWakeLock) {
+            wakeLock = null;
+          }
         });
         
         return true;
