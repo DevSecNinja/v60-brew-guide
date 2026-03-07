@@ -207,3 +207,46 @@ describe('CSS and Styling', () => {
     expect(preconnect.length).toBeGreaterThan(0);
   });
 });
+
+describe('Mobile Table Scrolling', () => {
+  let styleContent;
+
+  beforeAll(() => {
+    const { JSDOM } = require('jsdom');
+    const dom = new JSDOM(htmlContent);
+    const doc = dom.window.document;
+    const style = doc.querySelector('style');
+    styleContent = style.textContent;
+  });
+
+  test('has media query for mobile/tablet (768px)', () => {
+    expect(styleContent).toContain('@media (max-width: 768px)');
+  });
+
+  test('table-wrapper has max-height for mobile scrolling', () => {
+    expect(styleContent).toContain('.table-wrapper');
+    expect(styleContent).toContain('max-height: 50vh');
+  });
+
+  test('table-wrapper has overflow-y for vertical scrolling', () => {
+    expect(styleContent).toContain('overflow-y: auto');
+  });
+
+  test('sticky header is applied to thead th (not thead) for cross-browser support', () => {
+    // Sticky on thead th works reliably across browsers including iOS Safari
+    expect(styleContent).toContain('.table-wrapper thead th');
+    expect(styleContent).toMatch(/\.table-wrapper thead th[\s\S]*?position:\s*sticky/);
+  });
+
+  test('sticky header has z-index for proper layering', () => {
+    expect(styleContent).toMatch(/\.table-wrapper thead th[\s\S]*?z-index:\s*1/);
+  });
+
+  test('sticky header has background color to prevent content showing through', () => {
+    expect(styleContent).toMatch(/\.table-wrapper thead th[\s\S]*?background:\s*var\(--cream\)/);
+  });
+
+  test('sticky header has top: 0 for positioning', () => {
+    expect(styleContent).toMatch(/\.table-wrapper thead th[\s\S]*?top:\s*0/);
+  });
+});
