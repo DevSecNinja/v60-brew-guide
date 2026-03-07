@@ -839,9 +839,85 @@
     let stepTimers = []; // interval IDs
     let stepStartTimes = []; // timestamps
     let stepRemaining = []; // remaining seconds (countdown)
+    let wakeLock = null; // WakeLock sentinel to keep screen on during brew
 
     // Step durations in seconds: Bloom 45s, Pour 1 30s, Pour 2 30s, Drain 105s
     const STEP_DURATIONS = [45, 30, 30, 105];
+
+    // --- Wake Lock API ---
+    // Pending promise to serialize wake lock requests
+    let wakeLockPending = null;
+
+    // Request wake lock to keep screen on during brewing
+    async function requestWakeLock() {
+      if (!('wakeLock' in navigator)) {
+        return false;
+      }
+
+      // If a wake lock is already held, do not request another one
+      if (wakeLock !== null) {
+        return true;
+      }
+
+      // If a request is already in flight, wait for it and return the result
+      if (wakeLockPending !== null) {
+        return wakeLockPending;
+      }
+
+      // Create a new request and track it as pending
+      const pendingRequest = (async () => {
+        try {
+          const currentWakeLock = await navigator.wakeLock.request('screen');
+          wakeLock = currentWakeLock;
+          
+          // Listen for wake lock release (e.g., tab becomes hidden)
+          currentWakeLock.addEventListener('release', () => {
+            // Only clear the global if it still refers to this sentinel
+            if (wakeLock === currentWakeLock) {
+              wakeLock = null;
+            }
+          });
+          
+          return true;
+        } catch (error) {
+          return false;
+        } finally {
+          // Clear pending only if this is still the active pending request
+          if (wakeLockPending === pendingRequest) {
+            wakeLockPending = null;
+          }
+        }
+      })();
+
+      wakeLockPending = pendingRequest;
+      return pendingRequest;
+    }
+
+    // Release wake lock to restore default screen behavior
+    async function releaseWakeLock() {
+      const currentWakeLock = wakeLock;
+      if (currentWakeLock !== null) {
+        // Clear shared reference before awaiting release to avoid races
+        wakeLock = null;
+        try {
+          await currentWakeLock.release();
+        } catch (error) {
+          // Silently handle release errors
+        }
+      }
+    }
+
+    // Check if brew is currently running (any step in 'running' state)
+    function isBrewRunning() {
+      return stepStates.some(s => s === 'running');
+    }
+
+    // Re-acquire wake lock when page becomes visible again (if brew is running)
+    document.addEventListener('visibilitychange', async () => {
+      if (document.visibilityState === 'visible' && isBrewRunning() && wakeLock === null) {
+        await requestWakeLock();
+      }
+    });
 
     // --- Slider input handler ---
     function handleSliderInput() {
@@ -928,6 +1004,9 @@
       stepStartTimes = new Array(STEP_COUNT).fill(null);
       stepRemaining = STEP_DURATIONS.slice(); // copy durations as initial countdown
       stepStates = new Array(STEP_COUNT).fill('locked');
+
+      // Release wake lock when brew is reset
+      releaseWakeLock();
 
       // First step is available
       if (selectedRecipe) {
@@ -1124,6 +1203,9 @@
     function showBrewComplete() {
       stepsGrid.classList.add('fade-out');
       document.getElementById('brewComplete').classList.add('show');
+      
+      // Release wake lock when brew is complete
+      releaseWakeLock();
     }
 
     function handleStepClick(stepIndex) {
@@ -1133,6 +1215,11 @@
         // Request notification permission on first interaction (best practice for iOS)
         if (stepIndex === 0 && notificationPermission === 'default') {
           requestNotificationPermission();
+        }
+
+        // Request wake lock on first step to keep screen on during brew
+        if (stepIndex === 0) {
+          requestWakeLock();
         }
 
         // Start countdown
