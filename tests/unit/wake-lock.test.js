@@ -51,7 +51,7 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
 
     test('releaseWakeLock handles null wakeLock gracefully', async () => {
       // Should not throw when wakeLock is null
-      await expect(window.releaseWakeLock()).resolves.not.toThrow();
+      await expect(window.releaseWakeLock()).resolves.toBeUndefined();
     });
   });
 
