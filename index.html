@@ -1203,11 +1203,13 @@
       // Show notification
       showStepNotification(stepIndex);
 
-      // Unlock next step
+      // Unlock and auto-start next step
       if (stepIndex + 1 < STEP_COUNT) {
         stepStates[stepIndex + 1] = 'available';
+        handleStepClick(stepIndex + 1);
+      } else {
+        renderSteps();
       }
-      renderSteps();
 
       // Check if all steps completed
       if (stepStates.every(s => s === 'completed')) {
