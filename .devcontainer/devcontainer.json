@@ -1,6 +1,6 @@
 {
   "name": "V60 Recipe",
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:24",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:24@sha256:21f15d367bfc5ceadabb9989be48029cba1e6bd80da323405232614a267a9c45",
   "postCreateCommand": "npm install",
   "customizations": {
     "vscode": {
