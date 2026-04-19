@@ -145,7 +145,7 @@ The service worker uses a **cache-first** strategy:
 Apple-specific meta tags ensure proper behavior when added to the home screen:
 
 - `apple-mobile-web-app-capable` — launches in standalone mode (no Safari chrome).
-- `apple-mobile-web-app-status-bar-style` — default status bar style, allowing the `theme-color` (espresso brown) to color the Dynamic Island and status bar on iOS.
+- `apple-mobile-web-app-status-bar-style` — dark translucent status bar matching the espresso theme.
 - `apple-mobile-web-app-title` — "V60 Recipe" as the home screen label.
 - `apple-touch-icon` — 180×180 icon used on the home screen.
 
