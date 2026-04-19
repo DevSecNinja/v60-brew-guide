@@ -80,37 +80,55 @@ describe('V60 Recipe Calculator — Core Logic', () => {
       expect(row250.dataset.coffee).toBe(expectedCoffee);
     });
 
-    test('bloom is 2x the coffee weight', () => {
+    test('bloom is 20% of total water', () => {
       const rows = doc.querySelectorAll('#recipeTableBody tr');
       Array.from(rows).forEach(row => {
-        const coffee = parseFloat(row.dataset.coffee);
+        const water = parseInt(row.dataset.water);
         const bloom = parseInt(row.dataset.bloom);
-        expect(bloom).toBe(Math.round(coffee * 2));
+        expect(bloom).toBe(Math.round(water * 0.2));
       });
     });
 
-    test('pour 1 is 60% of total water', () => {
+    test('pour 1 is 40% of total water', () => {
       const rows = doc.querySelectorAll('#recipeTableBody tr');
       Array.from(rows).forEach(row => {
         const water = parseInt(row.dataset.water);
         const pour1 = parseInt(row.dataset.pour1);
-        expect(pour1).toBe(Math.round(water * 0.6));
+        expect(pour1).toBe(Math.round(water * 0.4));
       });
     });
 
-    test('pour 2 equals total water', () => {
+    test('pour 2 is 60% of total water', () => {
       const rows = doc.querySelectorAll('#recipeTableBody tr');
       Array.from(rows).forEach(row => {
         const water = parseInt(row.dataset.water);
         const pour2 = parseInt(row.dataset.pour2);
-        expect(pour2).toBe(water);
+        expect(pour2).toBe(Math.round(water * 0.6));
       });
     });
 
-    test('all rows have 6 columns', () => {
+    test('pour 3 is 80% of total water', () => {
+      const rows = doc.querySelectorAll('#recipeTableBody tr');
+      Array.from(rows).forEach(row => {
+        const water = parseInt(row.dataset.water);
+        const pour3 = parseInt(row.dataset.pour3);
+        expect(pour3).toBe(Math.round(water * 0.8));
+      });
+    });
+
+    test('pour 4 equals total water', () => {
+      const rows = doc.querySelectorAll('#recipeTableBody tr');
+      Array.from(rows).forEach(row => {
+        const water = parseInt(row.dataset.water);
+        const pour4 = parseInt(row.dataset.pour4);
+        expect(pour4).toBe(water);
+      });
+    });
+
+    test('all rows have 8 columns', () => {
       const rows = doc.querySelectorAll('#recipeTableBody tr');
       rows.forEach(row => {
-        expect(row.querySelectorAll('td').length).toBe(6);
+        expect(row.querySelectorAll('td').length).toBe(8);
       });
     });
 
@@ -232,7 +250,7 @@ describe('V60 Recipe Calculator — Core Logic', () => {
 
     test('subsequent steps remain locked after selection', () => {
       selectRow(250);
-      for (let i = 1; i < 4; i++) {
+      for (let i = 1; i < 6; i++) {
         const step = doc.getElementById('step' + i);
         expect(step.classList.contains('locked')).toBe(true);
       }
@@ -241,22 +259,22 @@ describe('V60 Recipe Calculator — Core Logic', () => {
     test('step details are populated with recipe values', () => {
       selectRow(300);
       const step0Detail = doc.getElementById('step0Detail').innerHTML;
-      const coffee = (300 / 16.7).toFixed(1);
-      const bloom = (parseFloat(coffee) * 2).toFixed(0);
+      const bloom = Math.round(300 * 0.2);
       expect(step0Detail).toContain(bloom + 'g');
     });
 
-    test('step 1 detail contains pour 1 value (60% of water)', () => {
+    test('step 1 detail contains pour 1 value (40% of water)', () => {
       selectRow(300);
       const step1Detail = doc.getElementById('step1Detail').innerHTML;
-      const pour1 = (300 * 0.6).toFixed(0);
+      const pour1 = Math.round(300 * 0.4);
       expect(step1Detail).toContain(pour1 + 'g');
     });
 
-    test('step 2 detail contains total water value', () => {
+    test('step 2 detail contains pour 2 value (60% of water)', () => {
       selectRow(300);
       const step2Detail = doc.getElementById('step2Detail').innerHTML;
-      expect(step2Detail).toContain('300g');
+      const pour2 = Math.round(300 * 0.6);
+      expect(step2Detail).toContain(pour2 + 'g');
     });
   });
 
@@ -309,7 +327,7 @@ describe('V60 Recipe Calculator — Core Logic', () => {
 
     test('completing all steps shows brew complete message', () => {
       selectAndStartBrew(250);
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 6; i++) {
         const step = doc.getElementById('step' + i);
         step.click(); // start
         step.click(); // complete
@@ -375,16 +393,16 @@ describe('V60 Recipe Calculator — Mathematical Accuracy', () => {
     }
   });
 
-  test('bloom weight is always within reasonable range (2x coffee ±1g rounding)', () => {
+  test('bloom weight is always 20% of water (within rounding)', () => {
     const rows = doc.querySelectorAll('#recipeTableBody tr');
     rows.forEach(row => {
-      const coffee = parseFloat(row.dataset.coffee);
+      const water = parseInt(row.dataset.water);
       const bloom = parseInt(row.dataset.bloom);
-      expect(Math.abs(bloom - coffee * 2)).toBeLessThanOrEqual(1);
+      expect(bloom).toBe(Math.round(water * 0.2));
     });
   });
 
-  test('pour 1 is always less than pour 2 (total water)', () => {
+  test('pour 1 is always less than pour 2', () => {
     const rows = doc.querySelectorAll('#recipeTableBody tr');
     rows.forEach(row => {
       const pour1 = parseInt(row.dataset.pour1);
@@ -506,14 +524,14 @@ describe('V60 Recipe Calculator — Audio Completion Sound', () => {
 
       selectAndStartBrew(250);
 
-      // Complete all 4 steps
-      for (let i = 0; i < 4; i++) {
+      // Complete all 6 steps
+      for (let i = 0; i < 6; i++) {
         const step = doc.getElementById('step' + i);
         step.click(); // start
         step.click(); // complete
       }
 
-      expect(callCount).toBe(4);
+      expect(callCount).toBe(6);
 
       // Restore
       window.playCompletionSound = originalPlaySound;

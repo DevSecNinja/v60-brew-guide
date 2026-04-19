@@ -103,7 +103,7 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
     test('returns false when all steps are completed', () => {
       selectRow(250);
       // Complete all steps
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 6; i++) {
         const step = doc.getElementById('step' + i);
         step.click(); // start
         step.click(); // complete
@@ -186,7 +186,7 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
       selectRow(250);
 
       // Complete all steps
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 6; i++) {
         const step = doc.getElementById('step' + i);
         step.click(); // start
         step.click(); // complete

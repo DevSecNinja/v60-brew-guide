@@ -48,7 +48,7 @@ describe('V60 Recipe Calculator — Favorites Feature', () => {
 
     test('table header has a favorite column', () => {
       const headers = doc.querySelectorAll('thead th');
-      expect(headers.length).toBe(6);
+      expect(headers.length).toBe(8);
       const lastHeader = headers[headers.length - 1];
       expect(lastHeader.textContent.trim()).toBe('♡');
     });

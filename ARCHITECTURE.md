@@ -43,18 +43,18 @@ The page is divided into four visual sections, rendered top to bottom:
 Static branding with a link to James Hoffmann's original video.
 
 ### 2. Brew Steps (interactive)
-A 4-step guided brew timer driven by a finite state machine (see below). Steps display recipe-specific values and countdown timers. This section is hidden until a recipe is selected from the table.
+A 6-step guided brew timer driven by a finite state machine (see below). Steps display recipe-specific values and countdown timers. This section is hidden until a recipe is selected from the table.
 
 ### 3. Ratio Slider
 An `<input type="range">` (1:14 to 1:18, step 0.1) that recalculates the entire recipe table on every `input` event. Features:
 - **Reset button** — appears only when the slider is away from the default.
 
 ### 4. Recipe Table
-A dynamically generated `<table>` with rows from 100g to 500g water in 10g increments. Columns: Water, Coffee (1 decimal), Bloom (2× coffee), Pour 1 (60% of water), Pour 2 (100% of water). The 250g row is permanently highlighted as the classic recipe. Clicking a row selects it and loads its values into the brew steps.
+A dynamically generated `<table>` with rows from 100g to 500g water in 10g increments. Columns: Water, Coffee (1 decimal), Bloom (20% of water), Pour 1 (40% of water), Pour 2 (60% of water), Pour 3 (80% of water), Pour 4 (100% of water). The 250g row is permanently highlighted as the classic recipe. Clicking a row selects it and loads its values into the brew steps.
 
 ## Brew Step State Machine
 
-Each of the 4 brew steps transitions through a strict sequential state machine:
+Each of the 6 brew steps transitions through a strict sequential state machine:
 
 ```
 locked → available → running → completed
@@ -76,14 +76,16 @@ locked → available → running → completed
 
 ### Countdown Durations
 
-Derived from James Hoffmann's timing structure:
+Derived from James Hoffmann's improved V60 technique timing:
 
-| Step        | Duration | Rationale                               |
-|-------------|----------|-----------------------------------------|
-| Bloom       | 0:45     | Pour bloom water, wait 45 seconds       |
-| Pour 1      | 0:30     | Pour to 60% of total by 1:15 (45s+30s)  |
-| Pour 2      | 0:30     | Pour to 100% of total by 1:45 (75s+30s) |
-| Finish      | 1:45     | Swirl and drain, target ~3:30 total     |
+| Step        | Duration | Rationale                                  |
+|-------------|----------|--------------------------------------------|
+| Bloom       | 0:45     | Pour bloom water (20% of total), swirl, wait |
+| Pour 1      | 0:25     | Pour to 40% of total by 1:10 (45s+25s)     |
+| Pour 2      | 0:20     | Pour to 60% of total by 1:30 (70s+20s)     |
+| Pour 3      | 0:20     | Pour to 80% of total by 1:50 (90s+20s)     |
+| Pour 4      | 0:15     | Pour to 100% of total by 2:05 (110s+15s)   |
+| Finish      | 0:55     | Gently swirl and drain, target ~3:00 total  |
 
 ## Styling & Theming
 

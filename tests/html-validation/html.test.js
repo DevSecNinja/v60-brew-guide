@@ -120,11 +120,13 @@ describe('HTML Structure', () => {
     expect(headerTexts).toContain('Bloom (g)');
     expect(headerTexts).toContain('Pour 1 to (g)');
     expect(headerTexts).toContain('Pour 2 to (g)');
+    expect(headerTexts).toContain('Pour 3 to (g)');
+    expect(headerTexts).toContain('Pour 4 to (g)');
   });
 
-  test('has 4 brew steps', () => {
+  test('has 6 brew steps', () => {
     const steps = doc.querySelectorAll('.step');
-    expect(steps.length).toBe(4);
+    expect(steps.length).toBe(6);
   });
 
   test('brew steps have correct labels', () => {
@@ -133,7 +135,9 @@ describe('HTML Structure', () => {
     expect(texts[0]).toContain('Bloom');
     expect(texts[1]).toContain('Pour 1');
     expect(texts[2]).toContain('Pour 2');
-    expect(texts[3]).toContain('Finish');
+    expect(texts[3]).toContain('Pour 3');
+    expect(texts[4]).toContain('Pour 4');
+    expect(texts[5]).toContain('Finish');
   });
 
   test('has ratio slider with correct attributes', () => {

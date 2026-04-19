@@ -6,10 +6,12 @@ Build a static V60 coffee recipe calculator website based on [James Hoffmann's U
 
 James Hoffmann's base recipe uses a **1:16.67 ratio** (15g coffee → 250g water). The brewing follows this pour structure:
 
-1. **Bloom** — pour 2× the coffee weight in water (e.g., 30g for 15g coffee), wait 45 seconds, swirl
-2. **Pour 1** — pour up to 60% of total water by 1:15
-3. **Pour 2** — pour up to 100% of total water by 1:45
-4. Final swirl, let drain — target total brew time ~3:30
+1. **Bloom** — pour 20% of total water (e.g., 50g for 250g), swirl, wait 45 seconds
+2. **Pour 1** — pour up to 40% of total water by 1:10
+3. **Pour 2** — pour up to 60% of total water by 1:30
+4. **Pour 3** — pour up to 80% of total water by 1:50
+5. **Pour 4** — pour up to 100% of total water by 2:05
+6. Final gentle swirl, let drain — target total brew time ~3:00
 
 Users often want to brew slightly more or less than 250ml but don't want to recalculate the pour breakdown manually.
 
@@ -18,9 +20,11 @@ Users often want to brew slightly more or less than 250ml but don't want to reca
 - Display a **reference table** showing the recipe scaled in **20ml water increments** from **100ml to 500ml**, with columns for:
   - Total water (g)
   - Coffee dose (g), rounded to 1 decimal
-  - Bloom water (g) — 2× coffee dose
-  - Pour 1 target (g) — 60% of total water
-  - Pour 2 target (g) — 100% of total water
+  - Bloom water (g) — 20% of total water
+  - Pour 1 target (g) — 40% of total water
+  - Pour 2 target (g) — 60% of total water
+  - Pour 3 target (g) — 80% of total water
+  - Pour 4 target (g) — 100% of total water
 - **Highlight the classic 250ml row** as the default/base recipe
 - Add a **ratio slider** (range: 1:14 to 1:18, step 0.1, default 1:16.7) that **dynamically recalculates** all table values when adjusted. Display the current ratio value next to the slider.
 - Responsive, **mobile-friendly layout** (users will check this on their phone while brewing)

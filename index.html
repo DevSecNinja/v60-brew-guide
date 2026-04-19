@@ -903,27 +903,39 @@
       <div class="steps-grid" id="stepsGrid" style="display:none;">
         <div class="step locked" id="step0" data-step="0">
           <div class="step-label">1 — Bloom</div>
-          <div class="step-detail" id="step0Detail">Pour <strong>--g</strong> water<br>Wait 45s, swirl</div>
+          <div class="step-detail" id="step0Detail">Pour <strong>--g</strong> water<br>Swirl, wait 45s</div>
           <div class="step-timer" id="step0Timer">0:00</div>
           <div class="step-hint" id="step0Hint"></div>
         </div>
         <div class="step locked" id="step1" data-step="1">
           <div class="step-label">2 — Pour 1</div>
-          <div class="step-detail" id="step1Detail">Pour to <strong>--g</strong><br>by <strong>1:15</strong></div>
+          <div class="step-detail" id="step1Detail">Pour to <strong>--g</strong><br>by <strong>1:10</strong></div>
           <div class="step-timer" id="step1Timer">0:00</div>
           <div class="step-hint" id="step1Hint"></div>
         </div>
         <div class="step locked" id="step2" data-step="2">
           <div class="step-label">3 — Pour 2</div>
-          <div class="step-detail" id="step2Detail">Pour to <strong>--g</strong><br>by <strong>1:45</strong></div>
+          <div class="step-detail" id="step2Detail">Pour to <strong>--g</strong><br>by <strong>1:30</strong></div>
           <div class="step-timer" id="step2Timer">0:00</div>
           <div class="step-hint" id="step2Hint"></div>
         </div>
         <div class="step locked" id="step3" data-step="3">
-          <div class="step-label">4 — Finish</div>
-          <div class="step-detail" id="step3Detail">Swirl &amp; drain<br>Target <strong>~3:30</strong></div>
+          <div class="step-label">4 — Pour 3</div>
+          <div class="step-detail" id="step3Detail">Pour to <strong>--g</strong><br>by <strong>1:50</strong></div>
           <div class="step-timer" id="step3Timer">0:00</div>
           <div class="step-hint" id="step3Hint"></div>
+        </div>
+        <div class="step locked" id="step4" data-step="4">
+          <div class="step-label">5 — Pour 4</div>
+          <div class="step-detail" id="step4Detail">Pour to <strong>--g</strong><br>by <strong>2:05</strong></div>
+          <div class="step-timer" id="step4Timer">0:00</div>
+          <div class="step-hint" id="step4Hint"></div>
+        </div>
+        <div class="step locked" id="step5" data-step="5">
+          <div class="step-label">6 — Finish</div>
+          <div class="step-detail" id="step5Detail">Gently swirl &amp; drain<br>Target <strong>~3:00</strong></div>
+          <div class="step-timer" id="step5Timer">0:00</div>
+          <div class="step-hint" id="step5Hint"></div>
         </div>
       </div>
       <div class="brew-complete" id="brewComplete">
@@ -962,6 +974,8 @@
               <th scope="col">Bloom (g)</th>
               <th scope="col">Pour 1 to (g)</th>
               <th scope="col">Pour 2 to (g)</th>
+              <th scope="col">Pour 3 to (g)</th>
+              <th scope="col">Pour 4 to (g)</th>
               <th scope="col"><abbr title="Favorite">♡</abbr></th>
             </tr>
           </thead>
@@ -992,7 +1006,7 @@
   <script>
     // --- Constants ---
     const DEFAULT_RATIO = 16.7;
-    const STEP_COUNT = 4;
+    const STEP_COUNT = 6;
 
     // --- DOM refs ---
     const slider = document.getElementById('ratioSlider');
@@ -1037,7 +1051,7 @@
       return favorites.some(f => f.key === key);
     }
 
-    function toggleFavorite(ratio, water, coffee, bloom, pour1, pour2) {
+    function toggleFavorite(ratio, water, coffee, bloom, pour1, pour2, pour3, pour4) {
       const favorites = loadFavorites();
       const key = getFavoriteKey(ratio, water);
       const index = favorites.findIndex(f => f.key === key);
@@ -1053,6 +1067,8 @@
           bloom: bloom,
           pour1: pour1,
           pour2: pour2,
+          pour3: pour3,
+          pour4: pour4,
           description: ''
         });
       }
@@ -1099,7 +1115,7 @@
           ? `<span class="favorite-description-text" data-key="${fav.key}">${fav.description}</span>`
           : `<span class="favorite-description-text" data-key="${fav.key}"></span>`;
 
-        html += `<div class="favorite-card${isSelected ? ' selected' : ''}" data-fav-key="${fav.key}" data-fav-ratio="${fav.ratio}" data-fav-water="${fav.water}" data-fav-coffee="${fav.coffee}" data-fav-bloom="${fav.bloom}" data-fav-pour1="${fav.pour1}" data-fav-pour2="${fav.pour2}">
+        html += `<div class="favorite-card${isSelected ? ' selected' : ''}" data-fav-key="${fav.key}" data-fav-ratio="${fav.ratio}" data-fav-water="${fav.water}" data-fav-coffee="${fav.coffee}" data-fav-bloom="${fav.bloom}" data-fav-pour1="${fav.pour1}" data-fav-pour2="${fav.pour2}" data-fav-pour3="${fav.pour3}" data-fav-pour4="${fav.pour4}">
           <div class="favorite-card-header">
             <div>
               <span class="favorite-card-recipe">${fav.water}g water / ${fav.coffee}g coffee</span>
@@ -1200,15 +1216,15 @@
     }
 
     // --- Brew state ---
-    let selectedRecipe = null; // { water, coffee, bloom, pour1, pour2 }
+    let selectedRecipe = null; // { water, coffee, bloom, pour1, pour2, pour3, pour4 }
     let stepStates = []; // 'locked' | 'available' | 'running' | 'completed'
     let stepTimers = []; // interval IDs
     let stepStartTimes = []; // timestamps
     let stepRemaining = []; // remaining seconds (countdown)
     let wakeLock = null; // WakeLock sentinel to keep screen on during brew
 
-    // Step durations in seconds: Bloom 45s, Pour 1 30s, Pour 2 30s, Drain 105s
-    const STEP_DURATIONS = [45, 30, 30, 105];
+    // Step durations in seconds: Bloom 45s, Pour 1 25s, Pour 2 20s, Pour 3 20s, Pour 4 15s, Drain 55s
+    const STEP_DURATIONS = [45, 25, 20, 20, 15, 55];
 
     // --- Wake Lock API ---
     // Pending promise to serialize wake lock requests
@@ -1304,9 +1320,11 @@
       const currentRatio = ratio.toFixed(1);
       for (let water = 100; water <= 500; water += 10) {
         const coffee = (water / ratio).toFixed(1);
-        const bloom = (parseFloat(coffee) * 2).toFixed(0);
-        const pour1 = (water * 0.6).toFixed(0);
-        const pour2 = water;
+        const bloom = Math.round(water * 0.2);
+        const pour1 = Math.round(water * 0.4);
+        const pour2 = Math.round(water * 0.6);
+        const pour3 = Math.round(water * 0.8);
+        const pour4 = water;
         const isHighlight = water === 250;
         const isSelected = selectedRecipe && selectedRecipe.water === water;
         const favorited = isFavorite(currentRatio, water);
@@ -1315,13 +1333,15 @@
         if (isHighlight) classes.push('highlight');
         if (isSelected) classes.push('selected');
 
-        html += `<tr class="${classes.join(' ')}" data-water="${water}" data-coffee="${coffee}" data-bloom="${bloom}" data-pour1="${pour1}" data-pour2="${pour2}">
+        html += `<tr class="${classes.join(' ')}" data-water="${water}" data-coffee="${coffee}" data-bloom="${bloom}" data-pour1="${pour1}" data-pour2="${pour2}" data-pour3="${pour3}" data-pour4="${pour4}">
           <td>${water}g</td>
           <td>${coffee}g</td>
           <td>${bloom}g</td>
           <td>${pour1}g</td>
           <td>${pour2}g</td>
-          <td><button type="button" class="btn-favorite${favorited ? ' favorited' : ''}" aria-label="${favorited ? 'Remove from favorites' : 'Add to favorites'}" title="${favorited ? 'Remove from favorites' : 'Add to favorites'}" data-ratio="${currentRatio}" data-water="${water}" data-coffee="${coffee}" data-bloom="${bloom}" data-pour1="${pour1}" data-pour2="${pour2}">${favorited ? '♥' : '♡'}</button></td>
+          <td>${pour3}g</td>
+          <td>${pour4}g</td>
+          <td><button type="button" class="btn-favorite${favorited ? ' favorited' : ''}" aria-label="${favorited ? 'Remove from favorites' : 'Add to favorites'}" title="${favorited ? 'Remove from favorites' : 'Add to favorites'}" data-ratio="${currentRatio}" data-water="${water}" data-coffee="${coffee}" data-bloom="${bloom}" data-pour1="${pour1}" data-pour2="${pour2}" data-pour3="${pour3}" data-pour4="${pour4}">${favorited ? '♥' : '♡'}</button></td>
         </tr>`;
       }
       tableBody.innerHTML = html;
@@ -1339,7 +1359,7 @@
       tableBody.querySelectorAll('.btn-favorite').forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
-          toggleFavorite(btn.dataset.ratio, parseInt(btn.dataset.water), btn.dataset.coffee, btn.dataset.bloom, btn.dataset.pour1, btn.dataset.pour2);
+          toggleFavorite(btn.dataset.ratio, parseInt(btn.dataset.water), btn.dataset.coffee, btn.dataset.bloom, btn.dataset.pour1, btn.dataset.pour2, btn.dataset.pour3, btn.dataset.pour4);
           generateTable(ratio);
         });
       });
@@ -1352,8 +1372,10 @@
       const bloom = row.dataset.bloom;
       const pour1 = row.dataset.pour1;
       const pour2 = row.dataset.pour2;
+      const pour3 = row.dataset.pour3;
+      const pour4 = row.dataset.pour4;
 
-      selectedRecipe = { water, coffee, bloom, pour1, pour2 };
+      selectedRecipe = { water, coffee, bloom, pour1, pour2, pour3, pour4 };
 
       // Update table highlight
       tableBody.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
@@ -1367,10 +1389,12 @@
       brewRecipeLabel.textContent = `Brewing ${water}g water / ${coffee}g coffee`;
 
       // Update step details with recipe values
-      document.getElementById('step0Detail').innerHTML = `Pour <strong>${bloom}g</strong> water<br>Wait 45s, swirl`;
-      document.getElementById('step1Detail').innerHTML = `Pour to <strong>${pour1}g</strong> total<br>by <strong>1:15</strong>`;
-      document.getElementById('step2Detail').innerHTML = `Pour to <strong>${pour2}g</strong> total<br>by <strong>1:45</strong>`;
-      document.getElementById('step3Detail').innerHTML = `Swirl &amp; drain<br>Target <strong>~3:30</strong>`;
+      document.getElementById('step0Detail').innerHTML = `Pour <strong>${bloom}g</strong> water<br>Swirl, wait 45s`;
+      document.getElementById('step1Detail').innerHTML = `Pour to <strong>${pour1}g</strong> total<br>by <strong>1:10</strong>`;
+      document.getElementById('step2Detail').innerHTML = `Pour to <strong>${pour2}g</strong> total<br>by <strong>1:30</strong>`;
+      document.getElementById('step3Detail').innerHTML = `Pour to <strong>${pour3}g</strong> total<br>by <strong>1:50</strong>`;
+      document.getElementById('step4Detail').innerHTML = `Pour to <strong>${pour4}g</strong> total<br>by <strong>2:05</strong>`;
+      document.getElementById('step5Detail').innerHTML = `Gently swirl &amp; drain<br>Target <strong>~3:00</strong>`;
 
       // Reset brew state
       resetBrewState();
@@ -1473,14 +1497,18 @@
 
       const stepTitles = [
         '☕ Bloom Complete',
-        '☕ First Pour Complete',
-        '☕ Second Pour Complete',
+        '☕ Pour 1 Complete',
+        '☕ Pour 2 Complete',
+        '☕ Pour 3 Complete',
+        '☕ Pour 4 Complete',
         '☕ Coffee Ready!'
       ];
 
       const stepMessages = [
         'Time for the first pour',
         'Time for the second pour',
+        'Time for the third pour',
+        'Time for the fourth pour',
         'Time to swirl and let it drain',
         'Your V60 coffee is ready to enjoy!'
       ];
