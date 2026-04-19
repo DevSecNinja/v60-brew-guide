@@ -1,5 +1,5 @@
 // V60 Recipe Calculator - Service Worker
-const CACHE_NAME = 'v60-recipe-v1.13.0';
+const CACHE_NAME = 'v60-recipe-v1.14.0';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
