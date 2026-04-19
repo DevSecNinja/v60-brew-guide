@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>V60 Recipe Calculator - James Hoffmann's Pour-Over Coffee Guide</title>
   <meta name="description" content="V60 pour-over coffee calculator based on James Hoffmann's technique. Adjustable ratios, guided timer, and recipes from 100ml to 500ml.">
   <meta name="keywords" content="V60, pour over coffee, James Hoffmann, coffee calculator, coffee recipe, brewing guide, coffee timer, pour over technique, coffee ratio, specialty coffee">
@@ -84,6 +84,13 @@
       padding: 0;
     }
 
+    html {
+      /* Ensures the area behind the iOS status bar / Dynamic Island
+         (shown when using apple-mobile-web-app-status-bar-style=black-translucent)
+         takes on the app's brown theme color instead of white. */
+      background-color: #3E2723;
+    }
+
     :root {
       --espresso: #3E2723;
       --dark-brown: #4E342E;
@@ -124,6 +131,8 @@
       background: linear-gradient(135deg, var(--espresso), var(--dark-brown));
       color: var(--white);
       padding: 2rem 1rem;
+      /* Extend brown header behind the iOS status bar / Dynamic Island */
+      padding-top: calc(2rem + env(safe-area-inset-top));
       text-align: center;
     }
 
