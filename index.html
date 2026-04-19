@@ -102,6 +102,8 @@
       --green-light: #E8F5E9;
       --green-border: #66BB6A;
       --green-text: #2E7D32;
+      --favorite-color: #E53935;
+      --favorite-bg: #FFEBEE;
       --shadow: 0 2px 8px rgba(62, 39, 35, 0.12);
       --shadow-lg: 0 4px 16px rgba(62, 39, 35, 0.16);
       --radius: 12px;
@@ -683,6 +685,154 @@
       font-style: italic;
     }
 
+    /* Favorites */
+    .btn-favorite {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 0.2rem 0.4rem;
+      line-height: 1;
+      color: var(--light-accent);
+      transition: color 0.15s, transform 0.15s;
+      vertical-align: middle;
+    }
+
+    .btn-favorite:hover {
+      transform: scale(1.2);
+    }
+
+    .btn-favorite.favorited {
+      color: var(--favorite-color);
+    }
+
+    .favorites-section {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1.25rem 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .favorites-section h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--espresso);
+      margin-bottom: 0.25rem;
+    }
+
+    .favorites-hint {
+      padding-bottom: 0.75rem;
+      font-size: 0.75rem;
+      color: var(--light-accent);
+    }
+
+    .favorites-empty {
+      text-align: center;
+      padding: 1.5rem 0;
+      font-size: 0.85rem;
+      color: var(--light-accent);
+    }
+
+    .favorites-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .favorite-card {
+      background: var(--cream-light);
+      border: 1px solid var(--cream);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      transition: background-color 0.15s, box-shadow 0.15s;
+    }
+
+    .favorite-card:hover {
+      background: var(--cream);
+      box-shadow: var(--shadow);
+    }
+
+    .favorite-card.selected {
+      background: var(--selected-bg);
+      border-color: var(--selected-border);
+    }
+
+    .favorite-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .favorite-card-recipe {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--espresso);
+    }
+
+    .favorite-card-ratio {
+      font-size: 0.75rem;
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .favorite-card-actions {
+      display: flex;
+      gap: 0.25rem;
+      align-items: center;
+    }
+
+    .btn-remove-favorite {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+      padding: 0.2rem 0.4rem;
+      color: var(--light-accent);
+      transition: color 0.15s;
+      line-height: 1;
+    }
+
+    .btn-remove-favorite:hover {
+      color: var(--favorite-color);
+    }
+
+    .favorite-card-description {
+      margin-top: 0.5rem;
+    }
+
+    .favorite-description-text {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      font-style: italic;
+      cursor: text;
+      padding: 0.25rem 0;
+    }
+
+    .favorite-description-text:empty::before {
+      content: 'Click to add a note…';
+      color: var(--light-accent);
+    }
+
+    .favorite-description-input {
+      width: 100%;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8rem;
+      padding: 0.35rem 0.5rem;
+      border: 1px solid var(--cream);
+      border-radius: 4px;
+      color: var(--text-primary);
+      background: var(--white);
+      resize: none;
+      outline: none;
+    }
+
+    .favorite-description-input:focus {
+      border-color: var(--accent);
+    }
+
     /* Responsive */
     @media (max-width: 480px) {
       header {
@@ -812,12 +962,19 @@
               <th scope="col">Bloom (g)</th>
               <th scope="col">Pour 1 to (g)</th>
               <th scope="col">Pour 2 to (g)</th>
+              <th scope="col"><abbr title="Favorite">♡</abbr></th>
             </tr>
           </thead>
           <tbody id="recipeTableBody">
           </tbody>
         </table>
       </div>
+    </section>
+
+    <section class="favorites-section" id="favoritesSection" style="display:none;">
+      <h2><span aria-hidden="true">❤️</span> My Favorites</h2>
+      <p class="favorites-hint">Your saved recipes — tap to brew, click the note to add a description</p>
+      <div id="favoritesList" class="favorites-list"></div>
     </section>
   </main>
 
@@ -847,6 +1004,200 @@
     const noRecipeNotice = document.getElementById('noRecipeNotice');
     const brewRecipeLabel = document.getElementById('brewRecipeLabel');
     const btnResetBrew = document.getElementById('btnResetBrew');
+    const favoritesSection = document.getElementById('favoritesSection');
+    const favoritesList = document.getElementById('favoritesList');
+
+    // --- Favorites state ---
+    const FAVORITES_KEY = 'v60_favorites';
+
+    function loadFavorites() {
+      try {
+        const data = localStorage.getItem(FAVORITES_KEY);
+        return data ? JSON.parse(data) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveFavorites(favorites) {
+      try {
+        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+      } catch (e) {
+        // Silently fail if localStorage is not available
+      }
+    }
+
+    function getFavoriteKey(ratio, water) {
+      return ratio + ':' + water;
+    }
+
+    function isFavorite(ratio, water) {
+      const favorites = loadFavorites();
+      const key = getFavoriteKey(ratio, water);
+      return favorites.some(f => f.key === key);
+    }
+
+    function toggleFavorite(ratio, water, coffee, bloom, pour1, pour2) {
+      const favorites = loadFavorites();
+      const key = getFavoriteKey(ratio, water);
+      const index = favorites.findIndex(f => f.key === key);
+
+      if (index >= 0) {
+        favorites.splice(index, 1);
+      } else {
+        favorites.push({
+          key: key,
+          ratio: ratio,
+          water: water,
+          coffee: coffee,
+          bloom: bloom,
+          pour1: pour1,
+          pour2: pour2,
+          description: ''
+        });
+      }
+
+      saveFavorites(favorites);
+      renderFavorites();
+    }
+
+    function updateFavoriteDescription(key, description) {
+      const favorites = loadFavorites();
+      const fav = favorites.find(f => f.key === key);
+      if (fav) {
+        fav.description = description;
+        saveFavorites(favorites);
+      }
+    }
+
+    function removeFavorite(key) {
+      const favorites = loadFavorites();
+      const index = favorites.findIndex(f => f.key === key);
+      if (index >= 0) {
+        favorites.splice(index, 1);
+        saveFavorites(favorites);
+        renderFavorites();
+        // Update table to reflect removed favorite
+        generateTable(parseFloat(slider.value));
+      }
+    }
+
+    function renderFavorites() {
+      const favorites = loadFavorites();
+      if (favorites.length === 0) {
+        favoritesSection.style.display = 'none';
+        return;
+      }
+
+      favoritesSection.style.display = '';
+      let html = '';
+
+      favorites.forEach(fav => {
+        const isSelected = selectedRecipe && selectedRecipe.water === fav.water &&
+          parseFloat(slider.value).toFixed(1) === parseFloat(fav.ratio).toFixed(1);
+        const descriptionHtml = fav.description
+          ? `<span class="favorite-description-text" data-key="${fav.key}">${fav.description}</span>`
+          : `<span class="favorite-description-text" data-key="${fav.key}"></span>`;
+
+        html += `<div class="favorite-card${isSelected ? ' selected' : ''}" data-fav-key="${fav.key}" data-fav-ratio="${fav.ratio}" data-fav-water="${fav.water}" data-fav-coffee="${fav.coffee}" data-fav-bloom="${fav.bloom}" data-fav-pour1="${fav.pour1}" data-fav-pour2="${fav.pour2}">
+          <div class="favorite-card-header">
+            <div>
+              <span class="favorite-card-recipe">${fav.water}g water / ${fav.coffee}g coffee</span>
+              <span class="favorite-card-ratio">1:${parseFloat(fav.ratio).toFixed(1)}</span>
+            </div>
+            <div class="favorite-card-actions">
+              <button type="button" class="btn-remove-favorite" data-key="${fav.key}" aria-label="Remove favorite" title="Remove favorite">✕</button>
+            </div>
+          </div>
+          <div class="favorite-card-description">${descriptionHtml}</div>
+        </div>`;
+      });
+
+      favoritesList.innerHTML = html;
+
+      // Attach card click handlers (select recipe)
+      favoritesList.querySelectorAll('.favorite-card').forEach(card => {
+        card.addEventListener('click', (e) => {
+          // Don't trigger if clicking description text, input, or remove button
+          if (e.target.closest('.btn-remove-favorite') || e.target.closest('.favorite-description-text') || e.target.closest('.favorite-description-input')) return;
+          selectFavoriteRecipe(card);
+        });
+      });
+
+      // Attach remove handlers
+      favoritesList.querySelectorAll('.btn-remove-favorite').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          removeFavorite(btn.dataset.key);
+        });
+      });
+
+      // Attach description click-to-edit handlers
+      favoritesList.querySelectorAll('.favorite-description-text').forEach(span => {
+        span.addEventListener('click', (e) => {
+          e.stopPropagation();
+          startEditDescription(span);
+        });
+      });
+    }
+
+    function startEditDescription(span) {
+      const key = span.dataset.key;
+      const currentText = span.textContent || '';
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'favorite-description-input';
+      input.value = currentText;
+      input.placeholder = 'Add a note…';
+      input.maxLength = 200;
+
+      span.replaceWith(input);
+      input.focus();
+
+      function finishEdit() {
+        const newDescription = input.value.trim();
+        updateFavoriteDescription(key, newDescription);
+        const newSpan = document.createElement('span');
+        newSpan.className = 'favorite-description-text';
+        newSpan.dataset.key = key;
+        newSpan.textContent = newDescription;
+        input.replaceWith(newSpan);
+        newSpan.addEventListener('click', (e) => {
+          e.stopPropagation();
+          startEditDescription(newSpan);
+        });
+      }
+
+      input.addEventListener('blur', finishEdit);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          input.blur();
+        }
+        if (e.key === 'Escape') {
+          input.value = currentText;
+          input.blur();
+        }
+      });
+    }
+
+    function selectFavoriteRecipe(card) {
+      const ratio = parseFloat(card.dataset.favRatio);
+      const water = parseInt(card.dataset.favWater);
+
+      // Set the slider to the saved ratio
+      slider.value = ratio;
+      handleSliderInput();
+
+      // Find and click the matching row
+      const rows = tableBody.querySelectorAll('tr');
+      const targetRow = Array.from(rows).find(r => parseInt(r.dataset.water) === water);
+      if (targetRow) {
+        selectRecipe(targetRow);
+        // Scroll the brew steps into view
+        document.querySelector('.brew-steps').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
 
     // --- Brew state ---
     let selectedRecipe = null; // { water, coffee, bloom, pour1, pour2 }
@@ -950,6 +1301,7 @@
     // --- Table generation (10g increments) ---
     function generateTable(ratio) {
       let html = '';
+      const currentRatio = ratio.toFixed(1);
       for (let water = 100; water <= 500; water += 10) {
         const coffee = (water / ratio).toFixed(1);
         const bloom = (parseFloat(coffee) * 2).toFixed(0);
@@ -957,6 +1309,7 @@
         const pour2 = water;
         const isHighlight = water === 250;
         const isSelected = selectedRecipe && selectedRecipe.water === water;
+        const favorited = isFavorite(currentRatio, water);
 
         let classes = [];
         if (isHighlight) classes.push('highlight');
@@ -968,13 +1321,27 @@
           <td>${bloom}g</td>
           <td>${pour1}g</td>
           <td>${pour2}g</td>
+          <td><button type="button" class="btn-favorite${favorited ? ' favorited' : ''}" aria-label="${favorited ? 'Remove from favorites' : 'Add to favorites'}" title="${favorited ? 'Remove from favorites' : 'Add to favorites'}" data-ratio="${currentRatio}" data-water="${water}" data-coffee="${coffee}" data-bloom="${bloom}" data-pour1="${pour1}" data-pour2="${pour2}">${favorited ? '♥' : '♡'}</button></td>
         </tr>`;
       }
       tableBody.innerHTML = html;
 
       // Attach row click handlers
       tableBody.querySelectorAll('tr').forEach(row => {
-        row.addEventListener('click', () => selectRecipe(row));
+        row.addEventListener('click', (e) => {
+          // Don't select recipe when clicking the favorite button
+          if (e.target.closest('.btn-favorite')) return;
+          selectRecipe(row);
+        });
+      });
+
+      // Attach favorite button handlers
+      tableBody.querySelectorAll('.btn-favorite').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleFavorite(btn.dataset.ratio, parseInt(btn.dataset.water), btn.dataset.coffee, btn.dataset.bloom, btn.dataset.pour1, btn.dataset.pour2);
+          generateTable(ratio);
+        });
       });
     }
 
@@ -1277,6 +1644,7 @@
 
     // --- Init ---
     handleSliderInput();
+    renderFavorites();
 
     // --- GitHub Star Count ---
     // Note: Functions are kept in global scope for testing purposes

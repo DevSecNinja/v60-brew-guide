@@ -107,10 +107,10 @@ describe('V60 Recipe Calculator — Core Logic', () => {
       });
     });
 
-    test('all rows have 5 columns', () => {
+    test('all rows have 6 columns', () => {
       const rows = doc.querySelectorAll('#recipeTableBody tr');
       rows.forEach(row => {
-        expect(row.querySelectorAll('td').length).toBe(5);
+        expect(row.querySelectorAll('td').length).toBe(6);
       });
     });
 
