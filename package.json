@@ -7,7 +7,8 @@
     "test": "jest --verbose",
     "test:unit": "jest --verbose --testPathPattern=tests/unit",
     "test:html": "jest --verbose --testPathPattern=tests/html-validation",
-    "test:a11y": "jest --verbose --testPathPattern=tests/accessibility"
+    "test:a11y": "jest --verbose --testPathPattern=tests/accessibility",
+    "test:pwa": "jest --verbose --testPathPattern=tests/pwa"
   },
   "devDependencies": {
     "jest": "^29.7.0",

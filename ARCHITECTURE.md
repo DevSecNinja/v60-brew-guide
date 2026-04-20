@@ -151,6 +151,37 @@ Apple-specific meta tags ensure proper behavior when added to the home screen:
 - `apple-mobile-web-app-title` — "V60 Recipe" as the home screen label.
 - `apple-touch-icon` — 180×180 icon used on the home screen.
 
+### Testing the iOS / iPadOS PWA Experience
+
+Because testing the installed PWA on real Apple hardware is expensive,
+a dedicated Jest suite locks down the contract that makes the app
+behave correctly on iPhone and iPad:
+
+```bash
+npm run test:pwa
+```
+
+The suite ([`tests/pwa/ios-pwa.test.js`](tests/pwa/ios-pwa.test.js))
+validates:
+
+- Apple-specific meta tags (`apple-mobile-web-app-capable`,
+  `apple-mobile-web-app-status-bar-style`, `apple-mobile-web-app-title`)
+- The `apple-touch-icon` link and that the referenced file exists
+- Viewport with `viewport-fit=cover` and `env(safe-area-inset-*)`
+  usage for Dynamic Island / notch handling
+- iOS zoom-prevention handlers (`gesturestart`, `touchend`,
+  `touchmove`, …)
+- `manifest.json` validity and required PWA fields
+  (`display=standalone`, theme/background color, 192×192 & 512×512
+  icons, maskable icons)
+- Service worker pre-cache, `SKIP_WAITING` + `clients.claim()` update
+  flow (important on iOS, where a waiting worker often never activates
+  until the app is force-quit)
+
+When making changes, run `npm run test:pwa` to catch regressions
+that would break the home-screen install, offline launch, or
+standalone-mode experience on iOS / iPadOS.
+
 ### Cache Versioning
 
 The cache name includes a version string (e.g. `v60-recipe-v1.16.0` for local
