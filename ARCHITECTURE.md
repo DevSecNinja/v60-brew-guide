@@ -19,6 +19,7 @@ The V60 Recipe Calculator is a single-file static web application (`index.html`)
 │   ├── icon-maskable-512.png       # 512×512 maskable icon
 │   ├── apple-touch-icon.png        # 180×180 Apple touch icon
 │   └── favicon.ico                 # Multi-size favicon (16×16, 32×32)
+├── playwright.config.js            # Playwright config (WebKit / iPhone 14 e2e tests)
 ├── .github/workflows/pages.yml     # GitHub Pages deployment workflow
 ├── README.md                       # Project documentation
 ├── ARCHITECTURE.md                 # This file
@@ -43,18 +44,18 @@ The page is divided into four visual sections, rendered top to bottom:
 Static branding with a link to James Hoffmann's original video.
 
 ### 2. Brew Steps (interactive)
-A 4-step guided brew timer driven by a finite state machine (see below). Steps display recipe-specific values and countdown timers. This section is hidden until a recipe is selected from the table.
+A 6-step guided brew timer driven by a finite state machine (see below). Steps display recipe-specific values and countdown timers. This section is hidden until a recipe is selected from the table.
 
 ### 3. Ratio Slider
 An `<input type="range">` (1:14 to 1:18, step 0.1) that recalculates the entire recipe table on every `input` event. Features:
 - **Reset button** — appears only when the slider is away from the default.
 
 ### 4. Recipe Table
-A dynamically generated `<table>` with rows from 100g to 500g water in 10g increments. Columns: Water, Coffee (1 decimal), Bloom (2× coffee), Pour 1 (60% of water), Pour 2 (100% of water). The 250g row is permanently highlighted as the classic recipe. Clicking a row selects it and loads its values into the brew steps.
+A dynamically generated `<table>` with rows from 100g to 500g water in 10g increments. Columns: Water, Coffee (1 decimal), Bloom (20% of water), Pour 1 (40% of water), Pour 2 (60% of water), Pour 3 (80% of water), Pour 4 (100% of water). The 250g row is permanently highlighted as the classic recipe. Clicking a row selects it and loads its values into the brew steps.
 
 ## Brew Step State Machine
 
-Each of the 4 brew steps transitions through a strict sequential state machine:
+Each of the 6 brew steps transitions through a strict sequential state machine:
 
 ```
 locked → available → running → completed
@@ -76,14 +77,16 @@ locked → available → running → completed
 
 ### Countdown Durations
 
-Derived from James Hoffmann's timing structure:
+Derived from James Hoffmann's improved V60 technique timing:
 
-| Step        | Duration | Rationale                               |
-|-------------|----------|-----------------------------------------|
-| Bloom       | 0:45     | Pour bloom water, wait 45 seconds       |
-| Pour 1      | 0:30     | Pour to 60% of total by 1:15 (45s+30s)  |
-| Pour 2      | 0:30     | Pour to 100% of total by 1:45 (75s+30s) |
-| Finish      | 1:45     | Swirl and drain, target ~3:30 total     |
+| Step        | Duration | Rationale                                  |
+|-------------|----------|--------------------------------------------|
+| Bloom       | 0:45     | Pour bloom water (20% of total), swirl, wait |
+| Pour 1      | 0:25     | Pour to 40% of total by 1:10 (45s+25s)     |
+| Pour 2      | 0:20     | Pour to 60% of total by 1:30 (70s+20s)     |
+| Pour 3      | 0:20     | Pour to 80% of total by 1:50 (90s+20s)     |
+| Pour 4      | 0:15     | Pour to 100% of total by 2:05 (110s+15s)   |
+| Finish      | 0:55     | Gently swirl and drain, target ~3:00 total  |
 
 ## Styling & Theming
 
@@ -149,9 +152,77 @@ Apple-specific meta tags ensure proper behavior when added to the home screen:
 - `apple-mobile-web-app-title` — "V60 Recipe" as the home screen label.
 - `apple-touch-icon` — 180×180 icon used on the home screen.
 
+### Testing the iOS / iPadOS PWA Experience
+
+Because testing the installed PWA on real Apple hardware is expensive,
+the project uses **two complementary test suites** to lock down iOS
+behaviour:
+
+#### 1. Static contract tests (Jest + JSDOM)
+
+```bash
+npm run test:pwa
+```
+
+The suite ([`tests/pwa/ios-pwa.test.js`](tests/pwa/ios-pwa.test.js))
+validates:
+
+- Apple-specific meta tags (`apple-mobile-web-app-capable`,
+  `apple-mobile-web-app-status-bar-style`, `apple-mobile-web-app-title`)
+- The `apple-touch-icon` link and that the referenced file exists
+- Viewport with `viewport-fit=cover` and `env(safe-area-inset-*)`
+  usage for Dynamic Island / notch handling
+- iOS zoom-prevention handlers (`gesturestart`, `touchend`,
+  `touchmove`, …)
+- `manifest.json` validity and required PWA fields
+  (`display=standalone`, theme/background color, 192×192 & 512×512
+  icons, maskable icons)
+- Service worker pre-cache, `SKIP_WAITING` + `clients.claim()` update
+  flow (important on iOS, where a waiting worker often never activates
+  until the app is force-quit)
+
+When making changes, run `npm run test:pwa` to catch regressions
+that would break the home-screen install, offline launch, or
+standalone-mode experience on iOS / iPadOS.
+
+#### 2. End-to-end runtime tests (Playwright + WebKit)
+
+```bash
+npm run test:e2e
+```
+
+The suite ([`tests/e2e/ios-webkit.spec.js`](tests/e2e/ios-webkit.spec.js))
+runs the app in a real WebKit engine emulating an iPhone 14 via
+[`playwright.config.js`](playwright.config.js). It catches runtime-only
+iOS bugs that static DOM assertions cannot:
+
+| Group | What is tested |
+|---|---|
+| **Page load** | App title, recipe table renders, JS initialisation ran |
+| **Zoom prevention** | `gesturestart` is cancelled; two-finger `touchmove` suppressed; single-finger scroll is **not** suppressed |
+| **Ratio slider** | Touch-driven slider input updates the coffee column in the table |
+| **Brew timer** | Tapping a recipe row reveals the brew steps; first step becomes available |
+| **Offline launch** | Service worker becomes the page controller; Cache API holds the core pre-cached assets |
+| **Viewport meta** | `initial-scale=1`, `user-scalable=no`, `maximum-scale=1` are set correctly |
+
+The Playwright configuration ([`playwright.config.js`](playwright.config.js))
+uses the `iPhone 14` device preset and spins up a local static-file server
+(via `serve`) so no build step is needed.
+
 ### Cache Versioning
 
-The cache name includes a version string (`v60-recipe-v1`). To bust the cache after a code change, increment the version in `sw.js`. The activate handler automatically deletes old caches.
+The cache name includes a version string (e.g. `v60-recipe-v1.16.0` for local
+development, `v60-recipe-sha-<short-sha>` in production). The value in
+`sw.js` (`const CACHE_NAME = 'v60-recipe-...'`) serves as a fallback for
+local use; the GitHub Pages deploy workflow automatically rewrites it to
+`v60-recipe-sha-${GITHUB_SHA::7}` at build time via a `sed` step in
+[`.github/workflows/pages.yml`](.github/workflows/pages.yml). This means every
+push to `main` ships with a unique cache name, so the `activate` handler
+reliably deletes the previous cache and users always pick up the latest
+`index.html`/`sw.js` without needing a manual version bump.
+
+If you need to bust the cache during local development or in a non-Pages
+environment, bump the fallback version string in `sw.js` manually.
 
 ## Design Trade-offs
 

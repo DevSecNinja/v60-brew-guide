@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>V60 Recipe Calculator - James Hoffmann's Pour-Over Coffee Guide</title>
   <meta name="description" content="V60 pour-over coffee calculator based on James Hoffmann's technique. Adjustable ratios, guided timer, and recipes from 100ml to 500ml.">
   <meta name="keywords" content="V60, pour over coffee, James Hoffmann, coffee calculator, coffee recipe, brewing guide, coffee timer, pour over technique, coffee ratio, specialty coffee">
@@ -84,6 +84,19 @@
       padding: 0;
     }
 
+    html {
+      /* Ensures the area behind the iOS status bar / Dynamic Island
+         (shown when using apple-mobile-web-app-status-bar-style=black-translucent)
+         takes on the app's brown theme color instead of white. */
+      background-color: #3E2723;
+      /* Prevent double-tap zoom and disable text size adjustment on iOS/Android,
+         especially when installed as a PWA. Combined with the viewport meta tag
+         (maximum-scale=1, user-scalable=no), this prevents accidental zooming. */
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
     :root {
       --espresso: #3E2723;
       --dark-brown: #4E342E;
@@ -102,6 +115,8 @@
       --green-light: #E8F5E9;
       --green-border: #66BB6A;
       --green-text: #2E7D32;
+      --favorite-color: #E53935;
+      --favorite-bg: #FFEBEE;
       --shadow: 0 2px 8px rgba(62, 39, 35, 0.12);
       --shadow-lg: 0 4px 16px rgba(62, 39, 35, 0.16);
       --radius: 12px;
@@ -121,7 +136,9 @@
     header {
       background: linear-gradient(135deg, var(--espresso), var(--dark-brown));
       color: var(--white);
-      padding: 2rem 1rem;
+      padding: 1.25rem 1rem;
+      /* Extend brown header behind the iOS status bar / Dynamic Island */
+      padding-top: calc(1.25rem + env(safe-area-inset-top));
       text-align: center;
     }
 
@@ -683,10 +700,162 @@
       font-style: italic;
     }
 
+    /* Favorites */
+    .btn-favorite {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 0.2rem 0.4rem;
+      line-height: 1;
+      color: var(--light-accent);
+      transition: color 0.15s, transform 0.15s;
+      vertical-align: middle;
+    }
+
+    .btn-favorite:hover {
+      transform: scale(1.2);
+    }
+
+    .btn-favorite.favorited {
+      color: var(--favorite-color);
+    }
+
+    .favorites-section {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1.25rem 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .favorites-section h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--espresso);
+      margin-bottom: 0.25rem;
+    }
+
+    .favorites-hint {
+      padding-bottom: 0.75rem;
+      font-size: 0.75rem;
+      color: var(--light-accent);
+    }
+
+    .favorites-empty {
+      text-align: center;
+      padding: 1.5rem 0;
+      font-size: 0.85rem;
+      color: var(--light-accent);
+    }
+
+    .favorites-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .favorite-card {
+      background: var(--cream-light);
+      border: 1px solid var(--cream);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      transition: background-color 0.15s, box-shadow 0.15s;
+    }
+
+    .favorite-card:hover {
+      background: var(--cream);
+      box-shadow: var(--shadow);
+    }
+
+    .favorite-card.selected {
+      background: var(--selected-bg);
+      border-color: var(--selected-border);
+    }
+
+    .favorite-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .favorite-card-recipe {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--espresso);
+    }
+
+    .favorite-card-ratio {
+      font-size: 0.75rem;
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .favorite-card-actions {
+      display: flex;
+      gap: 0.25rem;
+      align-items: center;
+    }
+
+    .btn-remove-favorite {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+      padding: 0.2rem 0.4rem;
+      color: var(--light-accent);
+      transition: color 0.15s;
+      line-height: 1;
+    }
+
+    .btn-remove-favorite:hover {
+      color: var(--favorite-color);
+    }
+
+    .favorite-card-description {
+      margin-top: 0.5rem;
+    }
+
+    .favorite-description-text {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      font-style: italic;
+      cursor: text;
+      padding: 0.25rem 0;
+    }
+
+    .favorite-description-text:empty::before {
+      content: 'Click to add a note…';
+      color: var(--light-accent);
+    }
+
+    .favorite-description-input {
+      width: 100%;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8rem;
+      padding: 0.35rem 0.5rem;
+      border: 1px solid var(--cream);
+      border-radius: 4px;
+      color: var(--text-primary);
+      background: var(--white);
+      resize: none;
+      outline: none;
+    }
+
+    .favorite-description-input:focus {
+      border-color: var(--accent);
+    }
+
     /* Responsive */
     @media (max-width: 480px) {
       header {
-        padding: 1.5rem 1rem;
+        padding: 1rem 1rem;
+        /* Preserve safe-area inset so content stays below the iOS
+           status bar / Dynamic Island (the shorthand above would
+           otherwise reset padding-top to 1rem). */
+        padding-top: calc(1rem + env(safe-area-inset-top));
       }
 
       header h1 {
@@ -744,6 +913,7 @@
           <div class="brew-selected-recipe" id="brewRecipeLabel">Select a recipe from the table below</div>
         </div>
         <div class="brew-actions">
+          <button type="button" class="btn-reset-brew" id="btnShareRecipe" title="Share this recipe" hidden>Share</button>
           <button type="button" class="btn-reset-brew" id="btnResetBrew" title="Reset all brew steps">Reset</button>
         </div>
       </div>
@@ -753,27 +923,39 @@
       <div class="steps-grid" id="stepsGrid" style="display:none;">
         <div class="step locked" id="step0" data-step="0">
           <div class="step-label">1 — Bloom</div>
-          <div class="step-detail" id="step0Detail">Pour <strong>--g</strong> water<br>Wait 45s, swirl</div>
+          <div class="step-detail" id="step0Detail">Pour <strong>--g</strong> water<br>Swirl, wait 45s</div>
           <div class="step-timer" id="step0Timer">0:00</div>
           <div class="step-hint" id="step0Hint"></div>
         </div>
         <div class="step locked" id="step1" data-step="1">
           <div class="step-label">2 — Pour 1</div>
-          <div class="step-detail" id="step1Detail">Pour to <strong>--g</strong><br>by <strong>1:15</strong></div>
+          <div class="step-detail" id="step1Detail">Pour to <strong>--g</strong><br>by <strong>1:10</strong></div>
           <div class="step-timer" id="step1Timer">0:00</div>
           <div class="step-hint" id="step1Hint"></div>
         </div>
         <div class="step locked" id="step2" data-step="2">
           <div class="step-label">3 — Pour 2</div>
-          <div class="step-detail" id="step2Detail">Pour to <strong>--g</strong><br>by <strong>1:45</strong></div>
+          <div class="step-detail" id="step2Detail">Pour to <strong>--g</strong><br>by <strong>1:30</strong></div>
           <div class="step-timer" id="step2Timer">0:00</div>
           <div class="step-hint" id="step2Hint"></div>
         </div>
         <div class="step locked" id="step3" data-step="3">
-          <div class="step-label">4 — Finish</div>
-          <div class="step-detail" id="step3Detail">Swirl &amp; drain<br>Target <strong>~3:30</strong></div>
+          <div class="step-label">4 — Pour 3</div>
+          <div class="step-detail" id="step3Detail">Pour to <strong>--g</strong><br>by <strong>1:50</strong></div>
           <div class="step-timer" id="step3Timer">0:00</div>
           <div class="step-hint" id="step3Hint"></div>
+        </div>
+        <div class="step locked" id="step4" data-step="4">
+          <div class="step-label">5 — Pour 4</div>
+          <div class="step-detail" id="step4Detail">Pour to <strong>--g</strong><br>by <strong>2:05</strong></div>
+          <div class="step-timer" id="step4Timer">0:00</div>
+          <div class="step-hint" id="step4Hint"></div>
+        </div>
+        <div class="step locked" id="step5" data-step="5">
+          <div class="step-label">6 — Finish</div>
+          <div class="step-detail" id="step5Detail">Gently swirl &amp; drain<br>Target <strong>~3:00</strong></div>
+          <div class="step-timer" id="step5Timer">0:00</div>
+          <div class="step-hint" id="step5Hint"></div>
         </div>
       </div>
       <div class="brew-complete" id="brewComplete">
@@ -812,12 +994,21 @@
               <th scope="col">Bloom (g)</th>
               <th scope="col">Pour 1 to (g)</th>
               <th scope="col">Pour 2 to (g)</th>
+              <th scope="col">Pour 3 to (g)</th>
+              <th scope="col">Pour 4 to (g)</th>
+              <th scope="col"><abbr title="Favorite">♡</abbr></th>
             </tr>
           </thead>
           <tbody id="recipeTableBody">
           </tbody>
         </table>
       </div>
+    </section>
+
+    <section class="favorites-section" id="favoritesSection" style="display:none;">
+      <h2><span aria-hidden="true">❤️</span> My Favorites</h2>
+      <p class="favorites-hint">Your saved recipes — tap to brew, click the note to add a description</p>
+      <div id="favoritesList" class="favorites-list"></div>
     </section>
   </main>
 
@@ -833,9 +1024,51 @@
   </footer>
 
   <script>
+    // --- Prevent accidental zoom on iOS/Android (PWA) ---
+    // iOS Safari ignores `user-scalable=no` / `maximum-scale` in the viewport
+    // meta tag, so we additionally block pinch-zoom gestures and double-tap
+    // zoom in JavaScript. This complements the viewport meta tag and the
+    // `touch-action: manipulation` CSS rule on <html>.
+    (function preventZoom() {
+      // Block pinch-zoom (iOS Safari fires non-standard gesture events).
+      ['gesturestart', 'gesturechange', 'gestureend'].forEach((evt) => {
+        document.addEventListener(evt, (e) => e.preventDefault(), { passive: false });
+      });
+
+      // Block double-tap zoom on iOS by preventing the synthetic zoom when
+      // two touchend events occur within 350ms of each other.
+      let lastTouchEnd = 0;
+      document.addEventListener('touchend', (e) => {
+        const now = Date.now();
+        if (now - lastTouchEnd <= 350) {
+          e.preventDefault();
+        }
+        lastTouchEnd = now;
+      }, { passive: false });
+
+      // Block pinch-zoom via multi-touch on browsers that expose touchmove.
+      document.addEventListener('touchmove', (e) => {
+        if (e.touches && e.touches.length > 1) {
+          e.preventDefault();
+        }
+      }, { passive: false });
+
+      // Block Ctrl/Cmd + wheel zoom and Ctrl/Cmd + '+'/'-'/'0' on desktop PWAs.
+      document.addEventListener('wheel', (e) => {
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+        }
+      }, { passive: false });
+      document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && ['+', '-', '=', '0'].includes(e.key)) {
+          e.preventDefault();
+        }
+      });
+    })();
+
     // --- Constants ---
     const DEFAULT_RATIO = 16.7;
-    const STEP_COUNT = 4;
+    const STEP_COUNT = 6;
 
     // --- DOM refs ---
     const slider = document.getElementById('ratioSlider');
@@ -847,17 +1080,214 @@
     const noRecipeNotice = document.getElementById('noRecipeNotice');
     const brewRecipeLabel = document.getElementById('brewRecipeLabel');
     const btnResetBrew = document.getElementById('btnResetBrew');
+    const btnShareRecipe = document.getElementById('btnShareRecipe');
+    const favoritesSection = document.getElementById('favoritesSection');
+    const favoritesList = document.getElementById('favoritesList');
+
+    // --- Favorites state ---
+    const FAVORITES_KEY = 'v60_favorites';
+
+    function loadFavorites() {
+      try {
+        const data = localStorage.getItem(FAVORITES_KEY);
+        return data ? JSON.parse(data) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveFavorites(favorites) {
+      try {
+        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+      } catch (e) {
+        // Silently fail if localStorage is not available
+      }
+    }
+
+    function getFavoriteKey(ratio, water) {
+      return ratio + ':' + water;
+    }
+
+    function isFavorite(ratio, water) {
+      const favorites = loadFavorites();
+      const key = getFavoriteKey(ratio, water);
+      return favorites.some(f => f.key === key);
+    }
+
+    function toggleFavorite(ratio, water, coffee, bloom, pour1, pour2, pour3, pour4) {
+      const favorites = loadFavorites();
+      const key = getFavoriteKey(ratio, water);
+      const index = favorites.findIndex(f => f.key === key);
+
+      if (index >= 0) {
+        favorites.splice(index, 1);
+      } else {
+        favorites.push({
+          key: key,
+          ratio: ratio,
+          water: water,
+          coffee: coffee,
+          bloom: bloom,
+          pour1: pour1,
+          pour2: pour2,
+          pour3: pour3,
+          pour4: pour4,
+          description: ''
+        });
+      }
+
+      saveFavorites(favorites);
+      renderFavorites();
+    }
+
+    function updateFavoriteDescription(key, description) {
+      const favorites = loadFavorites();
+      const fav = favorites.find(f => f.key === key);
+      if (fav) {
+        fav.description = description;
+        saveFavorites(favorites);
+      }
+    }
+
+    function removeFavorite(key) {
+      const favorites = loadFavorites();
+      const index = favorites.findIndex(f => f.key === key);
+      if (index >= 0) {
+        favorites.splice(index, 1);
+        saveFavorites(favorites);
+        renderFavorites();
+        // Update table to reflect removed favorite
+        generateTable(parseFloat(slider.value));
+      }
+    }
+
+    function renderFavorites() {
+      const favorites = loadFavorites();
+      if (favorites.length === 0) {
+        favoritesSection.style.display = 'none';
+        return;
+      }
+
+      favoritesSection.style.display = '';
+      let html = '';
+
+      favorites.forEach(fav => {
+        const isSelected = selectedRecipe && selectedRecipe.water === fav.water &&
+          parseFloat(slider.value).toFixed(1) === parseFloat(fav.ratio).toFixed(1);
+        const descriptionHtml = fav.description
+          ? `<span class="favorite-description-text" data-key="${fav.key}">${fav.description}</span>`
+          : `<span class="favorite-description-text" data-key="${fav.key}"></span>`;
+
+        html += `<div class="favorite-card${isSelected ? ' selected' : ''}" data-fav-key="${fav.key}" data-fav-ratio="${fav.ratio}" data-fav-water="${fav.water}" data-fav-coffee="${fav.coffee}" data-fav-bloom="${fav.bloom}" data-fav-pour1="${fav.pour1}" data-fav-pour2="${fav.pour2}" data-fav-pour3="${fav.pour3}" data-fav-pour4="${fav.pour4}">
+          <div class="favorite-card-header">
+            <div>
+              <span class="favorite-card-recipe">${fav.water}g water / ${fav.coffee}g coffee</span>
+              <span class="favorite-card-ratio">1:${parseFloat(fav.ratio).toFixed(1)}</span>
+            </div>
+            <div class="favorite-card-actions">
+              <button type="button" class="btn-remove-favorite" data-key="${fav.key}" aria-label="Remove favorite" title="Remove favorite">✕</button>
+            </div>
+          </div>
+          <div class="favorite-card-description">${descriptionHtml}</div>
+        </div>`;
+      });
+
+      favoritesList.innerHTML = html;
+
+      // Attach card click handlers (select recipe)
+      favoritesList.querySelectorAll('.favorite-card').forEach(card => {
+        card.addEventListener('click', (e) => {
+          // Don't trigger if clicking description text, input, or remove button
+          if (e.target.closest('.btn-remove-favorite') || e.target.closest('.favorite-description-text') || e.target.closest('.favorite-description-input')) return;
+          selectFavoriteRecipe(card);
+        });
+      });
+
+      // Attach remove handlers
+      favoritesList.querySelectorAll('.btn-remove-favorite').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          removeFavorite(btn.dataset.key);
+        });
+      });
+
+      // Attach description click-to-edit handlers
+      favoritesList.querySelectorAll('.favorite-description-text').forEach(span => {
+        span.addEventListener('click', (e) => {
+          e.stopPropagation();
+          startEditDescription(span);
+        });
+      });
+    }
+
+    function startEditDescription(span) {
+      const key = span.dataset.key;
+      const currentText = span.textContent || '';
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'favorite-description-input';
+      input.value = currentText;
+      input.placeholder = 'Add a note…';
+      input.maxLength = 200;
+
+      span.replaceWith(input);
+      input.focus();
+
+      function finishEdit() {
+        const newDescription = input.value.trim();
+        updateFavoriteDescription(key, newDescription);
+        const newSpan = document.createElement('span');
+        newSpan.className = 'favorite-description-text';
+        newSpan.dataset.key = key;
+        newSpan.textContent = newDescription;
+        input.replaceWith(newSpan);
+        newSpan.addEventListener('click', (e) => {
+          e.stopPropagation();
+          startEditDescription(newSpan);
+        });
+      }
+
+      input.addEventListener('blur', finishEdit);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          input.blur();
+        }
+        if (e.key === 'Escape') {
+          input.value = currentText;
+          input.blur();
+        }
+      });
+    }
+
+    function selectFavoriteRecipe(card) {
+      const ratio = parseFloat(card.dataset.favRatio);
+      const water = parseInt(card.dataset.favWater);
+
+      // Set the slider to the saved ratio
+      slider.value = ratio;
+      handleSliderInput();
+
+      // Find and click the matching row
+      const rows = tableBody.querySelectorAll('tr');
+      const targetRow = Array.from(rows).find(r => parseInt(r.dataset.water) === water);
+      if (targetRow) {
+        selectRecipe(targetRow);
+        // Scroll all the way to the top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
 
     // --- Brew state ---
-    let selectedRecipe = null; // { water, coffee, bloom, pour1, pour2 }
+    let selectedRecipe = null; // { water, coffee, bloom, pour1, pour2, pour3, pour4 }
     let stepStates = []; // 'locked' | 'available' | 'running' | 'completed'
     let stepTimers = []; // interval IDs
     let stepStartTimes = []; // timestamps
     let stepRemaining = []; // remaining seconds (countdown)
     let wakeLock = null; // WakeLock sentinel to keep screen on during brew
 
-    // Step durations in seconds: Bloom 45s, Pour 1 30s, Pour 2 30s, Drain 105s
-    const STEP_DURATIONS = [45, 30, 30, 105];
+    // Step durations in seconds: Bloom 45s, Pour 1 25s, Pour 2 20s, Pour 3 20s, Pour 4 15s, Drain 55s
+    const STEP_DURATIONS = [45, 25, 20, 20, 15, 55];
 
     // --- Wake Lock API ---
     // Pending promise to serialize wake lock requests
@@ -940,6 +1370,7 @@
       ratioDisplay.textContent = '1:' + val.toFixed(1);
       btnResetRatio.classList.toggle('hidden', val === DEFAULT_RATIO);
       generateTable(val);
+      updateShareUrl();
     }
 
     function resetRatio() {
@@ -947,34 +1378,109 @@
       handleSliderInput();
     }
 
+    // --- Shareable URL sync ---
+    // URL format: ?ratio=1:16.7&water=300  (ratio also accepts plain "16.7")
+    function updateShareUrl() {
+      try {
+        const params = new URLSearchParams();
+        const ratio = parseFloat(slider.value);
+        if (!isNaN(ratio) && ratio !== DEFAULT_RATIO) {
+          params.set('ratio', '1:' + ratio.toFixed(1));
+        }
+        if (selectedRecipe && selectedRecipe.water) {
+          params.set('water', String(selectedRecipe.water));
+        }
+        const query = params.toString();
+        const newUrl = window.location.pathname + (query ? '?' + query : '') + window.location.hash;
+        window.history.replaceState(null, '', newUrl);
+      } catch (e) {
+        // history API unavailable - silently ignore
+      }
+    }
+
+    function parseRatioParam(raw) {
+      if (raw == null) return null;
+      // Accept "1:16.7", "16.7", or "1:16"
+      const match = String(raw).trim().match(/^(?:1\s*:\s*)?(\d+(?:\.\d+)?)$/);
+      if (!match) return null;
+      const val = parseFloat(match[1]);
+      if (isNaN(val)) return null;
+      const min = parseFloat(slider.min);
+      const max = parseFloat(slider.max);
+      if (val < min || val > max) return null;
+      return val;
+    }
+
+    function applyUrlParams() {
+      const params = new URLSearchParams(window.location.search);
+      const ratio = parseRatioParam(params.get('ratio'));
+      if (ratio !== null) {
+        slider.value = ratio;
+      }
+      handleSliderInput();
+
+      const waterRaw = params.get('water');
+      if (waterRaw !== null) {
+        const water = parseInt(waterRaw, 10);
+        if (!isNaN(water)) {
+          const rows = tableBody.querySelectorAll('tr');
+          const targetRow = Array.from(rows).find(r => parseInt(r.dataset.water, 10) === water);
+          if (targetRow) {
+            selectRecipe(targetRow);
+          }
+        }
+      }
+    }
+
     // --- Table generation (10g increments) ---
     function generateTable(ratio) {
       let html = '';
+      const currentRatio = ratio.toFixed(1);
       for (let water = 100; water <= 500; water += 10) {
         const coffee = (water / ratio).toFixed(1);
-        const bloom = (parseFloat(coffee) * 2).toFixed(0);
-        const pour1 = (water * 0.6).toFixed(0);
-        const pour2 = water;
+        const bloom = Math.round(water * 0.2);
+        const pour1 = Math.round(water * 0.4);
+        const pour2 = Math.round(water * 0.6);
+        const pour3 = Math.round(water * 0.8);
+        const pour4 = water;
         const isHighlight = water === 250;
         const isSelected = selectedRecipe && selectedRecipe.water === water;
+        const favorited = isFavorite(currentRatio, water);
 
         let classes = [];
         if (isHighlight) classes.push('highlight');
         if (isSelected) classes.push('selected');
 
-        html += `<tr class="${classes.join(' ')}" data-water="${water}" data-coffee="${coffee}" data-bloom="${bloom}" data-pour1="${pour1}" data-pour2="${pour2}">
+        html += `<tr class="${classes.join(' ')}" data-water="${water}" data-coffee="${coffee}" data-bloom="${bloom}" data-pour1="${pour1}" data-pour2="${pour2}" data-pour3="${pour3}" data-pour4="${pour4}">
           <td>${water}g</td>
           <td>${coffee}g</td>
           <td>${bloom}g</td>
           <td>${pour1}g</td>
           <td>${pour2}g</td>
+          <td>${pour3}g</td>
+          <td>${pour4}g</td>
+          <td><button type="button" class="btn-favorite${favorited ? ' favorited' : ''}" aria-label="${favorited ? 'Remove from favorites' : 'Add to favorites'}" title="${favorited ? 'Remove from favorites' : 'Add to favorites'}" data-ratio="${currentRatio}" data-water="${water}" data-coffee="${coffee}" data-bloom="${bloom}" data-pour1="${pour1}" data-pour2="${pour2}" data-pour3="${pour3}" data-pour4="${pour4}">${favorited ? '♥' : '♡'}</button></td>
         </tr>`;
       }
       tableBody.innerHTML = html;
 
       // Attach row click handlers
       tableBody.querySelectorAll('tr').forEach(row => {
-        row.addEventListener('click', () => selectRecipe(row));
+        row.addEventListener('click', (e) => {
+          // Don't select recipe when clicking the favorite button
+          if (e.target.closest('.btn-favorite')) return;
+          selectRecipe(row);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+      });
+
+      // Attach favorite button handlers
+      tableBody.querySelectorAll('.btn-favorite').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleFavorite(btn.dataset.ratio, parseInt(btn.dataset.water), btn.dataset.coffee, btn.dataset.bloom, btn.dataset.pour1, btn.dataset.pour2, btn.dataset.pour3, btn.dataset.pour4);
+          generateTable(ratio);
+        });
       });
     }
 
@@ -985,8 +1491,10 @@
       const bloom = row.dataset.bloom;
       const pour1 = row.dataset.pour1;
       const pour2 = row.dataset.pour2;
+      const pour3 = row.dataset.pour3;
+      const pour4 = row.dataset.pour4;
 
-      selectedRecipe = { water, coffee, bloom, pour1, pour2 };
+      selectedRecipe = { water, coffee, bloom, pour1, pour2, pour3, pour4 };
 
       // Update table highlight
       tableBody.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
@@ -1000,13 +1508,25 @@
       brewRecipeLabel.textContent = `Brewing ${water}g water / ${coffee}g coffee`;
 
       // Update step details with recipe values
-      document.getElementById('step0Detail').innerHTML = `Pour <strong>${bloom}g</strong> water<br>Wait 45s, swirl`;
-      document.getElementById('step1Detail').innerHTML = `Pour to <strong>${pour1}g</strong> total<br>by <strong>1:15</strong>`;
-      document.getElementById('step2Detail').innerHTML = `Pour to <strong>${pour2}g</strong> total<br>by <strong>1:45</strong>`;
-      document.getElementById('step3Detail').innerHTML = `Swirl &amp; drain<br>Target <strong>~3:30</strong>`;
+      document.getElementById('step0Detail').innerHTML = `Pour <strong>${bloom}g</strong> water<br>Swirl, wait 45s`;
+      document.getElementById('step1Detail').innerHTML = `Pour to <strong>${pour1}g</strong> total<br>by <strong>1:10</strong>`;
+      document.getElementById('step2Detail').innerHTML = `Pour to <strong>${pour2}g</strong> total<br>by <strong>1:30</strong>`;
+      document.getElementById('step3Detail').innerHTML = `Pour to <strong>${pour3}g</strong> total<br>by <strong>1:50</strong>`;
+      document.getElementById('step4Detail').innerHTML = `Pour to <strong>${pour4}g</strong> total<br>by <strong>2:05</strong>`;
+      document.getElementById('step5Detail').innerHTML = `Gently swirl &amp; drain<br>Target <strong>~3:00</strong>`;
 
       // Reset brew state
       resetBrewState();
+
+      // Keep the screen on as soon as a brew is selected, so users don't lose
+      // their place between tapping a recipe and starting the first pour.
+      // Requested after resetBrewState() because that helper releases any
+      // previously-held wake lock from an earlier selection.
+      requestWakeLock();
+
+      // Show the share button now that a recipe is selected, and sync URL
+      if (btnShareRecipe) btnShareRecipe.hidden = false;
+      updateShareUrl();
     }
 
     // --- Brew step logic ---
@@ -1106,14 +1626,18 @@
 
       const stepTitles = [
         '☕ Bloom Complete',
-        '☕ First Pour Complete',
-        '☕ Second Pour Complete',
+        '☕ Pour 1 Complete',
+        '☕ Pour 2 Complete',
+        '☕ Pour 3 Complete',
+        '☕ Pour 4 Complete',
         '☕ Coffee Ready!'
       ];
 
       const stepMessages = [
         'Time for the first pour',
         'Time for the second pour',
+        'Time for the third pour',
+        'Time for the fourth pour',
         'Time to swirl and let it drain',
         'Your V60 coffee is ready to enjoy!'
       ];
@@ -1234,10 +1758,8 @@
           requestNotificationPermission();
         }
 
-        // Request wake lock on first step to keep screen on during brew
-        if (stepIndex === 0) {
-          requestWakeLock();
-        }
+        // Note: wake lock is already requested when the recipe is selected
+        // (see selectRecipe); we no longer request it here.
 
         // Start countdown
         stepStates[stepIndex] = 'running';
@@ -1275,8 +1797,48 @@
     slider.addEventListener('input', handleSliderInput);
     btnResetRatio.addEventListener('click', resetRatio);
 
+    // --- Share button ---
+    async function shareCurrentRecipe() {
+      // Make sure the URL reflects current state before sharing
+      updateShareUrl();
+      const url = window.location.href;
+      const title = 'V60 Recipe';
+      const text = selectedRecipe
+        ? `V60 brew: ${selectedRecipe.water}g water / ${selectedRecipe.coffee}g coffee (1:${parseFloat(slider.value).toFixed(1)})`
+        : 'V60 Recipe Calculator';
+
+      try {
+        if (navigator.share) {
+          await navigator.share({ title, text, url });
+          return;
+        }
+      } catch (e) {
+        // User cancelled or share failed - fall through to clipboard
+      }
+
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(url);
+          const original = btnShareRecipe.textContent;
+          btnShareRecipe.textContent = 'Link copied!';
+          setTimeout(() => { btnShareRecipe.textContent = original; }, 1500);
+          return;
+        }
+      } catch (e) {
+        // Clipboard failed - fall through to prompt
+      }
+
+      // Last-resort fallback: show the URL so the user can copy it manually
+      try { window.prompt('Copy this link:', url); } catch (e) { /* ignore */ }
+    }
+
+    if (btnShareRecipe) {
+      btnShareRecipe.addEventListener('click', shareCurrentRecipe);
+    }
+
     // --- Init ---
-    handleSliderInput();
+    applyUrlParams();
+    renderFavorites();
 
     // --- GitHub Star Count ---
     // Note: Functions are kept in global scope for testing purposes

@@ -69,7 +69,20 @@ describe('HTML Structure', () => {
   test('has viewport meta tag', () => {
     const viewport = doc.querySelector('meta[name="viewport"]');
     expect(viewport).not.toBeNull();
-    expect(viewport.getAttribute('content')).toContain('width=device-width');
+    const content = viewport.getAttribute('content');
+    expect(content).toContain('width=device-width');
+    // Prevent accidental zoom-in on iOS/Android (PWA)
+    expect(content).toContain('maximum-scale=1');
+    expect(content).toContain('user-scalable=no');
+  });
+
+  test('blocks pinch and double-tap zoom via JavaScript (iOS fallback)', () => {
+    // iOS Safari ignores user-scalable=no, so the page must also
+    // preventDefault on gesture* and multi-touch touchmove events.
+    expect(htmlContent).toMatch(/gesturestart/);
+    expect(htmlContent).toMatch(/gesturechange/);
+    expect(htmlContent).toMatch(/gestureend/);
+    expect(htmlContent).toMatch(/touches\.length\s*>\s*1/);
   });
 
   test('has a title element', () => {
@@ -120,11 +133,13 @@ describe('HTML Structure', () => {
     expect(headerTexts).toContain('Bloom (g)');
     expect(headerTexts).toContain('Pour 1 to (g)');
     expect(headerTexts).toContain('Pour 2 to (g)');
+    expect(headerTexts).toContain('Pour 3 to (g)');
+    expect(headerTexts).toContain('Pour 4 to (g)');
   });
 
-  test('has 4 brew steps', () => {
+  test('has 6 brew steps', () => {
     const steps = doc.querySelectorAll('.step');
-    expect(steps.length).toBe(4);
+    expect(steps.length).toBe(6);
   });
 
   test('brew steps have correct labels', () => {
@@ -133,7 +148,9 @@ describe('HTML Structure', () => {
     expect(texts[0]).toContain('Bloom');
     expect(texts[1]).toContain('Pour 1');
     expect(texts[2]).toContain('Pour 2');
-    expect(texts[3]).toContain('Finish');
+    expect(texts[3]).toContain('Pour 3');
+    expect(texts[4]).toContain('Pour 4');
+    expect(texts[5]).toContain('Finish');
   });
 
   test('has ratio slider with correct attributes', () => {
