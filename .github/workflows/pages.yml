@@ -45,6 +45,12 @@ jobs:
       - name: Run accessibility tests
         run: npm run test:a11y
 
+      - name: Install Playwright WebKit browser
+        run: npx playwright install webkit --with-deps
+
+      - name: Run iOS / WebKit end-to-end tests
+        run: npm run test:e2e
+
   deploy:
     needs: test
     if: github.ref == 'refs/heads/main'

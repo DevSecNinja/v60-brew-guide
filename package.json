@@ -8,12 +8,14 @@
     "test:unit": "jest --verbose --testPathPattern=tests/unit",
     "test:html": "jest --verbose --testPathPattern=tests/html-validation",
     "test:a11y": "jest --verbose --testPathPattern=tests/accessibility",
-    "test:pwa": "jest --verbose --testPathPattern=tests/pwa"
+    "test:pwa": "jest --verbose --testPathPattern=tests/pwa",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
-    "jest": "^29.7.0",
-    "jest-environment-jsdom": "^30.2.0",
+    "@playwright/test": "^1.49.1",
+    "axe-core": "^4.9.0",
     "html-validate": "^8.20.0",
-    "axe-core": "^4.9.0"
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^30.2.0"
   }
 }

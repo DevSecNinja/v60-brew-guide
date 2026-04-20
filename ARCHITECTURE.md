@@ -19,6 +19,7 @@ The V60 Recipe Calculator is a single-file static web application (`index.html`)
 │   ├── icon-maskable-512.png       # 512×512 maskable icon
 │   ├── apple-touch-icon.png        # 180×180 Apple touch icon
 │   └── favicon.ico                 # Multi-size favicon (16×16, 32×32)
+├── playwright.config.js            # Playwright config (WebKit / iPhone 14 e2e tests)
 ├── .github/workflows/pages.yml     # GitHub Pages deployment workflow
 ├── README.md                       # Project documentation
 ├── ARCHITECTURE.md                 # This file
@@ -154,8 +155,10 @@ Apple-specific meta tags ensure proper behavior when added to the home screen:
 ### Testing the iOS / iPadOS PWA Experience
 
 Because testing the installed PWA on real Apple hardware is expensive,
-a dedicated Jest suite locks down the contract that makes the app
-behave correctly on iPhone and iPad:
+the project uses **two complementary test suites** to lock down iOS
+behaviour:
+
+#### 1. Static contract tests (Jest + JSDOM)
 
 ```bash
 npm run test:pwa
@@ -181,6 +184,30 @@ validates:
 When making changes, run `npm run test:pwa` to catch regressions
 that would break the home-screen install, offline launch, or
 standalone-mode experience on iOS / iPadOS.
+
+#### 2. End-to-end runtime tests (Playwright + WebKit)
+
+```bash
+npm run test:e2e
+```
+
+The suite ([`tests/e2e/ios-webkit.spec.js`](tests/e2e/ios-webkit.spec.js))
+runs the app in a real WebKit engine emulating an iPhone 14 via
+[`playwright.config.js`](playwright.config.js). It catches runtime-only
+iOS bugs that static DOM assertions cannot:
+
+| Group | What is tested |
+|---|---|
+| **Page load** | App title, recipe table renders, JS initialisation ran |
+| **Zoom prevention** | `gesturestart` is cancelled; two-finger `touchmove` suppressed; single-finger scroll is **not** suppressed |
+| **Ratio slider** | Touch-driven slider input updates the coffee column in the table |
+| **Brew timer** | Tapping a recipe row reveals the brew steps; first step becomes available |
+| **Offline launch** | Service worker becomes the page controller; Cache API holds the core pre-cached assets |
+| **Viewport meta** | `initial-scale=1`, `user-scalable=no`, `maximum-scale=1` are set correctly |
+
+The Playwright configuration ([`playwright.config.js`](playwright.config.js))
+uses the `iPhone 14` device preset and spins up a local static-file server
+(via `serve`) so no build step is needed.
 
 ### Cache Versioning
 
