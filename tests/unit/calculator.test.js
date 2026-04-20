@@ -588,3 +588,154 @@ describe('V60 Recipe Calculator — Audio Completion Sound', () => {
     });
   });
 });
+
+describe('Shareable recipe URLs', () => {
+  function createDOMWithUrl(search) {
+    return new JSDOM(html, {
+      runScripts: 'dangerously',
+      pretendToBeVisual: true,
+      url: 'http://localhost/' + (search || ''),
+    });
+  }
+
+  test('no query params: slider at default, no recipe selected, share button hidden', () => {
+    const dom = createDOMWithUrl('');
+    const doc = dom.window.document;
+    const slider = doc.getElementById('ratioSlider');
+    const selected = doc.querySelectorAll('#recipeTableBody tr.selected');
+    const btnShare = doc.getElementById('btnShareRecipe');
+
+    expect(parseFloat(slider.value)).toBe(16.7);
+    expect(selected.length).toBe(0);
+    expect(btnShare.hidden).toBe(true);
+    dom.window.close();
+  });
+
+  test('?ratio=1:16 sets the slider value', () => {
+    const dom = createDOMWithUrl('?ratio=1:16');
+    const doc = dom.window.document;
+    const slider = doc.getElementById('ratioSlider');
+    const ratioDisplay = doc.getElementById('ratioDisplay');
+
+    expect(parseFloat(slider.value)).toBe(16);
+    expect(ratioDisplay.textContent).toBe('1:16.0');
+    dom.window.close();
+  });
+
+  test('?ratio=16.7 (plain number) is also accepted', () => {
+    const dom = createDOMWithUrl('?ratio=15');
+    const doc = dom.window.document;
+    const slider = doc.getElementById('ratioSlider');
+
+    expect(parseFloat(slider.value)).toBe(15);
+    dom.window.close();
+  });
+
+  test('?water=300 selects the matching row', () => {
+    const dom = createDOMWithUrl('?water=300');
+    const doc = dom.window.document;
+    const selected = doc.querySelectorAll('#recipeTableBody tr.selected');
+    const btnShare = doc.getElementById('btnShareRecipe');
+
+    expect(selected.length).toBe(1);
+    expect(selected[0].dataset.water).toBe('300');
+    expect(btnShare.hidden).toBe(false);
+    dom.window.close();
+  });
+
+  test('?ratio=1:16&water=300 applies both ratio and selection', () => {
+    const dom = createDOMWithUrl('?ratio=1:16&water=300');
+    const doc = dom.window.document;
+    const slider = doc.getElementById('ratioSlider');
+    const selected = doc.querySelector('#recipeTableBody tr.selected');
+    const brewLabel = doc.getElementById('brewRecipeLabel');
+
+    expect(parseFloat(slider.value)).toBe(16);
+    expect(selected).not.toBeNull();
+    expect(selected.dataset.water).toBe('300');
+    // coffee for 300g water @ 1:16 = 18.8g
+    expect(selected.dataset.coffee).toBe((300 / 16).toFixed(1));
+    expect(brewLabel.textContent).toContain('300g water');
+    dom.window.close();
+  });
+
+  test('invalid ratio is ignored and slider stays at default', () => {
+    const dom = createDOMWithUrl('?ratio=abc&water=250');
+    const doc = dom.window.document;
+    const slider = doc.getElementById('ratioSlider');
+
+    expect(parseFloat(slider.value)).toBe(16.7);
+    dom.window.close();
+  });
+
+  test('out-of-range ratio is ignored', () => {
+    const dom = createDOMWithUrl('?ratio=1:99');
+    const doc = dom.window.document;
+    const slider = doc.getElementById('ratioSlider');
+
+    expect(parseFloat(slider.value)).toBe(16.7);
+    dom.window.close();
+  });
+
+  test('invalid water value does not crash or select a row', () => {
+    const dom = createDOMWithUrl('?water=12345');
+    const doc = dom.window.document;
+    const selected = doc.querySelectorAll('#recipeTableBody tr.selected');
+
+    expect(selected.length).toBe(0);
+    dom.window.close();
+  });
+
+  test('changing ratio updates the URL query string', () => {
+    const dom = createDOMWithUrl('');
+    const doc = dom.window.document;
+    const slider = doc.getElementById('ratioSlider');
+
+    slider.value = '15';
+    slider.dispatchEvent(new dom.window.Event('input'));
+
+    const params = new dom.window.URLSearchParams(dom.window.location.search);
+    expect(params.get('ratio')).toBe('1:15.0');
+    dom.window.close();
+  });
+
+  test('URL omits ratio when slider is at default', () => {
+    const dom = createDOMWithUrl('?ratio=1:15');
+    const doc = dom.window.document;
+    const slider = doc.getElementById('ratioSlider');
+    const btnResetRatio = doc.getElementById('btnResetRatio');
+
+    btnResetRatio.click();
+
+    const params = new dom.window.URLSearchParams(dom.window.location.search);
+    expect(params.get('ratio')).toBeNull();
+    dom.window.close();
+  });
+
+  test('selecting a recipe row updates the URL with water param', () => {
+    const dom = createDOMWithUrl('');
+    const doc = dom.window.document;
+    const row = Array.from(doc.querySelectorAll('#recipeTableBody tr'))
+      .find(r => r.dataset.water === '300');
+
+    row.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+
+    const params = new dom.window.URLSearchParams(dom.window.location.search);
+    expect(params.get('water')).toBe('300');
+    dom.window.close();
+  });
+
+  test('share button becomes visible after selecting a recipe', () => {
+    const dom = createDOMWithUrl('');
+    const doc = dom.window.document;
+    const btnShare = doc.getElementById('btnShareRecipe');
+    expect(btnShare.hidden).toBe(true);
+
+    const row = Array.from(doc.querySelectorAll('#recipeTableBody tr'))
+      .find(r => r.dataset.water === '250');
+    row.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+
+    expect(btnShare.hidden).toBe(false);
+    dom.window.close();
+  });
+});

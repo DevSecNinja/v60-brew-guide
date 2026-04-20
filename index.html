@@ -894,6 +894,7 @@
           <div class="brew-selected-recipe" id="brewRecipeLabel">Select a recipe from the table below</div>
         </div>
         <div class="brew-actions">
+          <button type="button" class="btn-reset-brew" id="btnShareRecipe" title="Share this recipe" hidden>Share</button>
           <button type="button" class="btn-reset-brew" id="btnResetBrew" title="Reset all brew steps">Reset</button>
         </div>
       </div>
@@ -1018,6 +1019,7 @@
     const noRecipeNotice = document.getElementById('noRecipeNotice');
     const brewRecipeLabel = document.getElementById('brewRecipeLabel');
     const btnResetBrew = document.getElementById('btnResetBrew');
+    const btnShareRecipe = document.getElementById('btnShareRecipe');
     const favoritesSection = document.getElementById('favoritesSection');
     const favoritesList = document.getElementById('favoritesList');
 
@@ -1307,11 +1309,66 @@
       ratioDisplay.textContent = '1:' + val.toFixed(1);
       btnResetRatio.classList.toggle('hidden', val === DEFAULT_RATIO);
       generateTable(val);
+      updateShareUrl();
     }
 
     function resetRatio() {
       slider.value = DEFAULT_RATIO;
       handleSliderInput();
+    }
+
+    // --- Shareable URL sync ---
+    // URL format: ?ratio=1:16.7&water=300  (ratio also accepts plain "16.7")
+    function updateShareUrl() {
+      try {
+        const params = new URLSearchParams();
+        const ratio = parseFloat(slider.value);
+        if (!isNaN(ratio) && ratio !== DEFAULT_RATIO) {
+          params.set('ratio', '1:' + ratio.toFixed(1));
+        }
+        if (selectedRecipe && selectedRecipe.water) {
+          params.set('water', String(selectedRecipe.water));
+        }
+        const query = params.toString();
+        const newUrl = window.location.pathname + (query ? '?' + query : '') + window.location.hash;
+        window.history.replaceState(null, '', newUrl);
+      } catch (e) {
+        // history API unavailable - silently ignore
+      }
+    }
+
+    function parseRatioParam(raw) {
+      if (raw == null) return null;
+      // Accept "1:16.7", "16.7", or "1:16"
+      const match = String(raw).trim().match(/^(?:1\s*:\s*)?(\d+(?:\.\d+)?)$/);
+      if (!match) return null;
+      const val = parseFloat(match[1]);
+      if (isNaN(val)) return null;
+      const min = parseFloat(slider.min);
+      const max = parseFloat(slider.max);
+      if (val < min || val > max) return null;
+      return val;
+    }
+
+    function applyUrlParams() {
+      const params = new URLSearchParams(window.location.search);
+      const ratio = parseRatioParam(params.get('ratio'));
+      if (ratio !== null) {
+        slider.value = ratio;
+      }
+      handleSliderInput();
+
+      const waterRaw = params.get('water');
+      if (waterRaw !== null) {
+        const water = parseInt(waterRaw, 10);
+        if (!isNaN(water)) {
+          const rows = tableBody.querySelectorAll('tr');
+          const targetRow = Array.from(rows).find(r => parseInt(r.dataset.water, 10) === water);
+          if (targetRow) {
+            selectRecipe(targetRow);
+          }
+        }
+      }
     }
 
     // --- Table generation (10g increments) ---
@@ -1398,6 +1455,10 @@
 
       // Reset brew state
       resetBrewState();
+
+      // Show the share button now that a recipe is selected, and sync URL
+      if (btnShareRecipe) btnShareRecipe.hidden = false;
+      updateShareUrl();
     }
 
     // --- Brew step logic ---
@@ -1670,8 +1731,47 @@
     slider.addEventListener('input', handleSliderInput);
     btnResetRatio.addEventListener('click', resetRatio);
 
+    // --- Share button ---
+    async function shareCurrentRecipe() {
+      // Make sure the URL reflects current state before sharing
+      updateShareUrl();
+      const url = window.location.href;
+      const title = 'V60 Recipe';
+      const text = selectedRecipe
+        ? `V60 brew: ${selectedRecipe.water}g water / ${selectedRecipe.coffee}g coffee (1:${parseFloat(slider.value).toFixed(1)})`
+        : 'V60 Recipe Calculator';
+
+      try {
+        if (navigator.share) {
+          await navigator.share({ title, text, url });
+          return;
+        }
+      } catch (e) {
+        // User cancelled or share failed - fall through to clipboard
+      }
+
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(url);
+          const original = btnShareRecipe.textContent;
+          btnShareRecipe.textContent = 'Link copied!';
+          setTimeout(() => { btnShareRecipe.textContent = original; }, 1500);
+          return;
+        }
+      } catch (e) {
+        // Clipboard failed - fall through to prompt
+      }
+
+      // Last-resort fallback: show the URL so the user can copy it manually
+      try { window.prompt('Copy this link:', url); } catch (e) { /* ignore */ }
+    }
+
+    if (btnShareRecipe) {
+      btnShareRecipe.addEventListener('click', shareCurrentRecipe);
+    }
+
     // --- Init ---
-    handleSliderInput();
+    applyUrlParams();
     renderFavorites();
 
     // --- GitHub Star Count ---
