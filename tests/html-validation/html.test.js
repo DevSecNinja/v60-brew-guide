@@ -69,7 +69,11 @@ describe('HTML Structure', () => {
   test('has viewport meta tag', () => {
     const viewport = doc.querySelector('meta[name="viewport"]');
     expect(viewport).not.toBeNull();
-    expect(viewport.getAttribute('content')).toContain('width=device-width');
+    const content = viewport.getAttribute('content');
+    expect(content).toContain('width=device-width');
+    // Prevent accidental zoom-in on iOS/Android (PWA)
+    expect(content).toContain('maximum-scale=1');
+    expect(content).toContain('user-scalable=no');
   });
 
   test('has a title element', () => {

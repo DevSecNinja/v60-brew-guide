@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>V60 Recipe Calculator - James Hoffmann's Pour-Over Coffee Guide</title>
   <meta name="description" content="V60 pour-over coffee calculator based on James Hoffmann's technique. Adjustable ratios, guided timer, and recipes from 100ml to 500ml.">
   <meta name="keywords" content="V60, pour over coffee, James Hoffmann, coffee calculator, coffee recipe, brewing guide, coffee timer, pour over technique, coffee ratio, specialty coffee">
@@ -89,6 +89,12 @@
          (shown when using apple-mobile-web-app-status-bar-style=black-translucent)
          takes on the app's brown theme color instead of white. */
       background-color: #3E2723;
+      /* Prevent double-tap zoom and disable text size adjustment on iOS/Android,
+         especially when installed as a PWA. Combined with the viewport meta tag
+         (maximum-scale=1, user-scalable=no), this prevents accidental zooming. */
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
     }
 
     :root {
