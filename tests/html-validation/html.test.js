@@ -76,6 +76,15 @@ describe('HTML Structure', () => {
     expect(content).toContain('user-scalable=no');
   });
 
+  test('blocks pinch and double-tap zoom via JavaScript (iOS fallback)', () => {
+    // iOS Safari ignores user-scalable=no, so the page must also
+    // preventDefault on gesture* and multi-touch touchmove events.
+    expect(htmlContent).toMatch(/gesturestart/);
+    expect(htmlContent).toMatch(/gesturechange/);
+    expect(htmlContent).toMatch(/gestureend/);
+    expect(htmlContent).toMatch(/touches\.length\s*>\s*1/);
+  });
+
   test('has a title element', () => {
     const title = doc.querySelector('title');
     expect(title).not.toBeNull();
