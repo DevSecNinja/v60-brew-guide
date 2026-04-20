@@ -136,9 +136,9 @@
     header {
       background: linear-gradient(135deg, var(--espresso), var(--dark-brown));
       color: var(--white);
-      padding: 2rem 1rem;
+      padding: 1.25rem 1rem;
       /* Extend brown header behind the iOS status bar / Dynamic Island */
-      padding-top: calc(2rem + env(safe-area-inset-top));
+      padding-top: calc(1.25rem + env(safe-area-inset-top));
       text-align: center;
     }
 
@@ -851,11 +851,11 @@
     /* Responsive */
     @media (max-width: 480px) {
       header {
-        padding: 1.5rem 1rem;
+        padding: 1rem 1rem;
         /* Preserve safe-area inset so content stays below the iOS
            status bar / Dynamic Island (the shorthand above would
-           otherwise reset padding-top to 1.5rem). */
-        padding-top: calc(1.5rem + env(safe-area-inset-top));
+           otherwise reset padding-top to 1rem). */
+        padding-top: calc(1rem + env(safe-area-inset-top));
       }
 
       header h1 {
