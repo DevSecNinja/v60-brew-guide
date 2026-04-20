@@ -894,7 +894,7 @@
           <div class="brew-selected-recipe" id="brewRecipeLabel">Select a recipe from the table below</div>
         </div>
         <div class="brew-actions">
-          <button type="button" class="btn-reset-brew" id="btnShareRecipe" title="Copy a shareable link to this recipe" hidden>Share</button>
+          <button type="button" class="btn-reset-brew" id="btnShareRecipe" title="Share this recipe" hidden>Share</button>
           <button type="button" class="btn-reset-brew" id="btnResetBrew" title="Reset all brew steps">Reset</button>
         </div>
       </div>
@@ -1333,7 +1333,7 @@
         const newUrl = window.location.pathname + (query ? '?' + query : '') + window.location.hash;
         window.history.replaceState(null, '', newUrl);
       } catch (e) {
-        // history API unavailable — silently ignore
+        // history API unavailable - silently ignore
       }
     }
 
@@ -1747,7 +1747,7 @@
           return;
         }
       } catch (e) {
-        // User cancelled or share failed — fall through to clipboard
+        // User cancelled or share failed - fall through to clipboard
       }
 
       try {
@@ -1759,7 +1759,7 @@
           return;
         }
       } catch (e) {
-        // Clipboard failed — fall through to prompt
+        // Clipboard failed - fall through to prompt
       }
 
       // Last-resort fallback: show the URL so the user can copy it manually
