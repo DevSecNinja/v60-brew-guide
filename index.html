@@ -9,7 +9,8 @@
   <meta name="author" content="DevSecNinja">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://v60.ravensberg.org/">
-  <meta name="theme-color" content="#3E2723">
+  <meta name="theme-color" content="#3E2723" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1C1210" media="(prefers-color-scheme: dark)">
 
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website">
@@ -115,7 +116,6 @@
     ]
   }
   </script>
-  <meta name="theme-color" content="#3E2723">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1021,6 +1021,160 @@
         background: var(--cream);
       }
     }
+
+    /* ====================================================================
+       Apple HIG — Safe Areas (bottom inset for home indicator)
+       The app already handles safe-area-inset-top for the Dynamic Island;
+       this adds bottom padding so footer content clears the home indicator
+       on iPhone X+ when running in standalone (PWA) mode.
+       ==================================================================== */
+    footer {
+      padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
+    }
+
+    /* ====================================================================
+       Apple HIG — Minimum 44×44pt Touch Targets
+       Apple's Human Interface Guidelines require interactive elements to
+       have a minimum tappable area of 44×44 points. We enforce this with
+       min-height/min-width and centered content on smaller controls.
+       ==================================================================== */
+    .btn-reset-brew,
+    .btn-reset-ratio {
+      min-height: 44px;
+      min-width: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-favorite,
+    .btn-remove-favorite {
+      min-height: 44px;
+      min-width: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    tbody tr {
+      min-height: 44px;
+    }
+
+    tbody td {
+      padding-top: 0.65rem;
+      padding-bottom: 0.65rem;
+    }
+
+    /* ====================================================================
+       Apple HIG — Reduced Motion
+       Respect the user's accessibility preference for reduced motion.
+       When prefers-reduced-motion is set, disable all keyframe animations
+       and CSS transitions to prevent vestibular discomfort.
+       See: developer.apple.com/design/human-interface-guidelines/motion
+       ==================================================================== */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* ====================================================================
+       Apple HIG — Dark Mode
+       Provide an automatic dark appearance that adapts to the system
+       setting. All colour tokens from :root are overridden so every
+       component inherits the dark palette without per-selector changes.
+       See: developer.apple.com/design/human-interface-guidelines/dark-mode
+       ==================================================================== */
+    @media (prefers-color-scheme: dark) {
+      html {
+        background-color: #1C1210;
+      }
+
+      :root {
+        --espresso: #F5E6D3;
+        --dark-brown: #2C1E1A;
+        --medium-brown: #A1887F;
+        --accent: #BCAAA4;
+        --light-accent: #8D6E63;
+        --cream: #2C2220;
+        --cream-light: #1C1210;
+        --highlight-bg: #3E2A10;
+        --highlight-border: #FF9800;
+        --selected-bg: #0D2137;
+        --selected-border: #64B5F6;
+        --text-primary: #F5E6D3;
+        --text-secondary: #D7CCC8;
+        --white: #231A17;
+        --green-light: #1B3A1B;
+        --green-border: #66BB6A;
+        --green-text: #81C784;
+        --favorite-color: #EF5350;
+        --favorite-bg: #3B1515;
+        --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
+      }
+
+      header {
+        background: linear-gradient(135deg, #2C1E1A, #1C1210);
+        color: #F5E6D3;
+      }
+
+      header a {
+        color: #D7CCC8;
+      }
+
+      thead {
+        background: var(--cream);
+      }
+
+      tbody tr:hover {
+        background-color: #2C2220;
+      }
+
+      tbody td {
+        border-bottom-color: #2C2220;
+      }
+
+      tbody tr.highlight td {
+        border-bottom-color: #3E2A10;
+      }
+
+      tbody tr.selected td {
+        border-bottom-color: #0D2137;
+      }
+
+      .github-star-button {
+        background: var(--white);
+        border-color: var(--cream);
+        color: var(--text-primary);
+      }
+
+      .github-star-button:hover {
+        background: var(--cream);
+        border-color: var(--accent);
+      }
+
+      .slider-track-container input[type="range"] {
+        background: #3E2723;
+      }
+
+      .favorite-description-input {
+        background: #2C2220;
+        border-color: #3E2723;
+        color: var(--text-primary);
+      }
+
+      .favorite-description-input:focus {
+        border-color: var(--accent);
+      }
+
+      /* Dark-mode sticky header must match the dark cream token */
+      .table-wrapper thead th {
+        background: var(--cream);
+      }
+    }
   </style>
 </head>
 <body>
@@ -1855,14 +2009,29 @@
       }
     }
 
+    // --- Haptic feedback (Apple HIG: Playing Haptics) ---
+    // Provide tactile feedback on brew step transitions using the
+    // Vibration API. This mirrors the "notification" haptic pattern
+    // recommended by Apple for signalling task completion.
+    function playHapticFeedback() {
+      try {
+        if (navigator.vibrate) {
+          navigator.vibrate([15, 30, 15]);
+        }
+      } catch (e) {
+        // Silently fail — haptics are a progressive enhancement
+      }
+    }
+
     function completeStep(stepIndex) {
       clearInterval(stepTimers[stepIndex]);
       stepTimers[stepIndex] = null;
       stepRemaining[stepIndex] = 0;
       stepStates[stepIndex] = 'completed';
 
-      // Play completion sound
+      // Play completion sound and haptic feedback
       playCompletionSound();
+      playHapticFeedback();
 
       // Show notification
       showStepNotification(stepIndex);
