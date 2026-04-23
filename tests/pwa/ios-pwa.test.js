@@ -209,6 +209,39 @@ describe('iOS / iPadOS PWA — Web app manifest', () => {
   });
 });
 
+describe('iOS / iPadOS PWA — Notification grouping', () => {
+  // iOS stacks each unique notification tag as a separate entry in the
+  // Notification Center.  The app fires multiple step notifications during
+  // a single brew; using the *same* tag for every step makes each new
+  // notification replace the previous one so only one entry is visible.
+
+  test('all showNotification / new Notification calls share a single tag for grouping', () => {
+    // Collect every `tag:` value from notification option objects in the HTML.
+    const tagMatches = [...html.matchAll(/tag\s*:\s*['"]([^'"]+)['"]/g)];
+    expect(tagMatches.length).toBeGreaterThanOrEqual(2); // SW path + fallback
+
+    const uniqueTags = new Set(tagMatches.map((m) => m[1]));
+    // All notification calls must use exactly one shared tag value.
+    expect(uniqueTags.size).toBe(1);
+
+    // The tag must be a fixed string — not a per-step template expression —
+    // so that iOS groups them into a single notification.
+    const [tag] = uniqueTags;
+    expect(tag).not.toMatch(/\+/); // no string concatenation
+  });
+
+  test('notifications set renotify so the user is still alerted on each replacement', () => {
+    // When the tag is reused, `renotify: true` ensures the device still
+    // plays the sound / vibration even though the notification is being
+    // replaced rather than created fresh.
+    const renotifyMatches = [...html.matchAll(/renotify\s*:\s*(true|false)/g)];
+    expect(renotifyMatches.length).toBeGreaterThanOrEqual(2); // SW path + fallback
+    renotifyMatches.forEach((m) => {
+      expect(m[1]).toBe('true');
+    });
+  });
+});
+
 describe('iOS / iPadOS PWA — Service worker', () => {
   test('index.html registers sw.js', () => {
     // The register call is built up as a template/string in index.html;
