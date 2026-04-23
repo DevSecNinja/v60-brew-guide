@@ -16,6 +16,10 @@ const PORT = 4173;
 module.exports = defineConfig({
   testDir: './tests/e2e',
 
+  // Strict timeouts to prevent runaway tests in CI.
+  timeout: 30_000,        // 30 s per individual test
+  globalTimeout: 300_000, // 5 min for the entire suite
+
   // Fail fast in CI; allow full retries locally so flaky network/SW
   // initialisation doesn't mask real failures.
   retries: process.env.CI ? 1 : 0,
