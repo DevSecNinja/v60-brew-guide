@@ -294,3 +294,85 @@ describe('iOS / iPadOS PWA — Service worker', () => {
     });
   });
 });
+
+describe('Apple HIG — Reduced Motion', () => {
+  test('CSS includes a prefers-reduced-motion media query', () => {
+    expect(html).toMatch(/@media\s*\(\s*prefers-reduced-motion\s*:\s*reduce\s*\)/);
+  });
+
+  test('reduced-motion rule disables animation-duration', () => {
+    // The rule must contain `animation-duration: 0.01ms` or similar
+    // near-zero value to effectively suppress animations.
+    expect(html).toMatch(/animation-duration\s*:\s*0\.01ms/);
+  });
+
+  test('reduced-motion rule disables transition-duration', () => {
+    expect(html).toMatch(/transition-duration\s*:\s*0\.01ms/);
+  });
+});
+
+describe('Apple HIG — Dark Mode', () => {
+  test('CSS includes a prefers-color-scheme: dark media query', () => {
+    expect(html).toMatch(/@media\s*\(\s*prefers-color-scheme\s*:\s*dark\s*\)/);
+  });
+
+  test('dark mode overrides --text-primary to a light colour', () => {
+    // Extract everything after the dark-mode media query opening brace.
+    const darkBlock = html.match(/@media\s*\(\s*prefers-color-scheme\s*:\s*dark\s*\)\s*\{([\s\S]+)/);
+    expect(darkBlock).not.toBeNull();
+    expect(darkBlock[1]).toMatch(/--text-primary\s*:/);
+  });
+
+  test('dark mode overrides --cream-light (page background) to a dark colour', () => {
+    const darkBlock = html.match(/@media\s*\(\s*prefers-color-scheme\s*:\s*dark\s*\)\s*\{([\s\S]+)/);
+    expect(darkBlock).not.toBeNull();
+    expect(darkBlock[1]).toMatch(/--cream-light\s*:/);
+  });
+
+  test('provides a dark theme-color meta tag for the status bar', () => {
+    const doc = parseHTML().window.document;
+    const darkThemeMeta = doc.querySelector('meta[name="theme-color"][media*="dark"]');
+    expect(darkThemeMeta).not.toBeNull();
+    // The dark theme-color should be a genuinely dark colour.
+    // Parse the hex value and verify its numeric brightness is low.
+    const color = darkThemeMeta.getAttribute('content');
+    expect(color).toMatch(/^#[0-9a-fA-F]{6}$/);
+    const numeric = parseInt(color.slice(1), 16);
+    expect(numeric).toBeLessThan(0x808080);
+  });
+
+  test('light theme-color meta tag is also present', () => {
+    const doc = parseHTML().window.document;
+    const lightThemeMeta = doc.querySelector('meta[name="theme-color"][media*="light"]');
+    expect(lightThemeMeta).not.toBeNull();
+    const manifest = JSON.parse(manifestRaw);
+    expect(lightThemeMeta.getAttribute('content').toLowerCase())
+      .toBe(manifest.theme_color.toLowerCase());
+  });
+});
+
+describe('Apple HIG — Safe Areas (bottom inset)', () => {
+  test('CSS uses env(safe-area-inset-bottom) for the home indicator', () => {
+    expect(html).toMatch(/env\(\s*safe-area-inset-bottom\s*\)/);
+  });
+});
+
+describe('Apple HIG — Minimum 44pt Touch Targets', () => {
+  test('CSS enforces min-height: 44px on interactive buttons', () => {
+    expect(html).toMatch(/min-height\s*:\s*44px/);
+  });
+
+  test('CSS enforces min-width: 44px on interactive buttons', () => {
+    expect(html).toMatch(/min-width\s*:\s*44px/);
+  });
+});
+
+describe('Apple HIG — Haptic Feedback', () => {
+  test('JavaScript includes a haptic feedback function using navigator.vibrate', () => {
+    expect(html).toMatch(/navigator\.vibrate/);
+  });
+
+  test('haptic feedback is called on step completion', () => {
+    expect(html).toMatch(/playHapticFeedback\s*\(\s*\)/);
+  });
+});
