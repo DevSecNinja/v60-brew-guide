@@ -121,13 +121,46 @@ jobs:
       deployments: write
 
     steps:
-      - name: Delete Cloudflare Pages preview deployment
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: '3'
-          command: >
-            pages deployment delete
-            --project-name=v60-recipe
-            --branch=${{ github.head_ref }}
+      - name: Delete Cloudflare Pages preview deployments
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PROJECT_NAME: v60-recipe
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+
+          # Fetch deployments for the branch
+          HTTP_CODE=$(curl -s -o /tmp/cf_response.json -w "%{http_code}" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT_NAME/deployments")
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            echo "::error::Failed to list deployments (HTTP $HTTP_CODE):"
+            cat /tmp/cf_response.json
+            exit 1
+          fi
+          RESPONSE=$(cat /tmp/cf_response.json)
+
+          # Extract deployment IDs matching the branch
+          DEPLOYMENT_IDS=$(echo "$RESPONSE" | jq -r \
+            --arg branch "$BRANCH" \
+            '.result[] | select(.deployment_trigger.metadata.branch == $branch) | .id')
+
+          if [ -z "$DEPLOYMENT_IDS" ]; then
+            echo "No preview deployments found for branch '$BRANCH'"
+            exit 0
+          fi
+
+          # Delete each deployment
+          for DEPLOYMENT_ID in $DEPLOYMENT_IDS; do
+            echo "Deleting deployment $DEPLOYMENT_ID for branch '$BRANCH'"
+            DEL_CODE=$(curl -s -o /tmp/cf_del_response.json -w "%{http_code}" -X DELETE \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT_NAME/deployments/$DEPLOYMENT_ID?force=true")
+            if [ "$DEL_CODE" -lt 200 ] || [ "$DEL_CODE" -ge 300 ]; then
+              echo "::warning::Failed to delete deployment $DEPLOYMENT_ID (HTTP $DEL_CODE):"
+              cat /tmp/cf_del_response.json
+            else
+              echo " ✅ Deleted"
+            fi
+          done
