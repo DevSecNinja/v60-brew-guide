@@ -457,7 +457,7 @@
 
     .brew-complete.show {
       display: block;
-      animation: fadeIn 0.6s ease 0.5s forwards;
+      animation: fadeIn 0.6s ease 0.6s forwards;
     }
 
     @keyframes fadeIn {
@@ -1973,6 +1973,7 @@
 
       // Hide completion message, restore steps grid
       stepsGrid.classList.remove('fade-out');
+      stepsGrid.style.display = '';
       document.getElementById('brewComplete').classList.remove('show');
 
       renderSteps();
@@ -2183,6 +2184,9 @@
 
     function showBrewComplete() {
       stepsGrid.classList.add('fade-out');
+      stepsGrid.addEventListener('animationend', () => {
+        stepsGrid.style.display = 'none';
+      }, { once: true });
       document.getElementById('brewComplete').classList.add('show');
       
       // Release wake lock when brew is complete
