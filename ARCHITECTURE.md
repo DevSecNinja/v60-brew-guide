@@ -21,6 +21,7 @@ The V60 Recipe Calculator is a single-file static web application (`index.html`)
 │   └── favicon.ico                 # Multi-size favicon (16×16, 32×32)
 ├── playwright.config.js            # Playwright config (WebKit / iPhone 14 e2e tests)
 ├── .github/workflows/pages.yml     # GitHub Pages deployment workflow
+├── .github/workflows/preview.yml   # Cloudflare Pages PR preview deployment workflow
 ├── README.md                       # Project documentation
 ├── ARCHITECTURE.md                 # This file
 ├── PROMPT.md                       # Original build prompt
@@ -115,6 +116,8 @@ Typography uses [Inter](https://fonts.google.com/specimen/Inter) via Google Font
 
 ## Deployment
 
+### Production (GitHub Pages)
+
 The GitHub Actions workflow (`.github/workflows/pages.yml`) deploys on every push to `main`:
 
 1. Checkout the repository
@@ -122,6 +125,19 @@ The GitHub Actions workflow (`.github/workflows/pages.yml`) deploys on every pus
 3. Deploy to GitHub Pages
 
 No build command is needed — the static files are served as-is.
+
+### PR Previews (Cloudflare Pages)
+
+The workflow `.github/workflows/preview.yml` deploys a preview of each pull request
+to Cloudflare Pages. It runs on `pull_request` events (opened, synchronize, reopened,
+closed) and:
+
+1. Skips fork PRs (Cloudflare secrets are not available)
+2. Validates that `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets are set
+3. Applies the same service-worker cache-version and footer-SHA updates as production
+4. Deploys to Cloudflare Pages using `wrangler pages deploy` with the PR branch name
+5. Posts (or updates) a PR comment with the preview URL
+6. Deletes the preview deployment when the PR is closed
 
 ## Progressive Web App (PWA)
 
