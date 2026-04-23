@@ -76,6 +76,16 @@ jobs:
           sed -i -E "s|const CACHE_NAME = 'v60-recipe-[^']+';|const CACHE_NAME = 'v60-recipe-${VERSION}';|" sw.js
           grep "const CACHE_NAME" sw.js
 
+      - name: Auto-update footer commit SHA
+        # Replace the placeholder "dev" text in the commit SHA span with the
+        # short commit SHA so users can identify the deployed version.
+        run: |
+          set -euo pipefail
+          SHORT_SHA="${GITHUB_SHA::7}"
+          echo "Setting footer commit SHA to ${SHORT_SHA}"
+          sed -i -E 's|(<span class="commit-sha" id="commitSha">)dev(</span>)|\1'"${SHORT_SHA}"'\2|' index.html
+          grep 'id="commitSha"' index.html
+
       - name: Auto-update sitemap lastmod date
         # Replace the hard-coded lastmod date in sitemap.xml with today's date
         # so search engines always see the actual deployment date.

@@ -33,6 +33,13 @@ describe('GitHub Star Feature', () => {
       expect(githubStarSection).not.toBeNull();
     });
 
+    test('footer contains commit SHA element', () => {
+      const commitSha = doc.getElementById('commitSha');
+      expect(commitSha).not.toBeNull();
+      expect(commitSha.classList.contains('commit-sha')).toBe(true);
+      expect(commitSha.closest('footer')).not.toBeNull();
+    });
+
     test('GitHub star button exists and links to repository', () => {
       const githubStarButton = doc.getElementById('githubStarButton');
       expect(githubStarButton).not.toBeNull();
