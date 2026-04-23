@@ -185,28 +185,66 @@ describe('V60 Recipe — Last Brew Persistence', () => {
 
   describe('Last brew restoration on page load', () => {
     test('recipe is restored from localStorage on fresh page load', () => {
-      // Save a last brew to localStorage
-      const recipe = { water: 300, coffee: '18.0', bloom: '60', pour1: '120', pour2: '180', pour3: '240', pour4: '300' };
-      window.localStorage.setItem('v60_last_brew', JSON.stringify({
-        recipe: recipe,
+      // Create a new DOM that has last brew in localStorage before scripts run
+      const lastBrewData = JSON.stringify({
+        recipe: { water: 300, coffee: '18.0', bloom: '60', pour1: '120', pour2: '180', pour3: '240', pour4: '300' },
         ratio: 16.7,
         completedAt: Date.now()
-      }));
+      });
 
-      // Create a new DOM (simulating page reload)
       const dom2 = new JSDOM(html, {
         runScripts: 'dangerously',
         pretendToBeVisual: true,
         url: 'http://localhost',
+        beforeParse(window) {
+          // Pre-populate localStorage before the page scripts execute
+          window.localStorage.setItem('v60_last_brew', lastBrewData);
+        }
       });
       const doc2 = dom2.window.document;
 
-      // Copy the localStorage
-      dom2.window.localStorage.setItem('v60_last_brew', window.localStorage.getItem('v60_last_brew'));
+      // The recipe should be restored: row 300g should be selected
+      const selected = doc2.querySelectorAll('#recipeTableBody tr.selected');
+      expect(selected.length).toBe(1);
+      expect(selected[0].dataset.water).toBe('300');
 
-      // The recipe should NOT be restored because JSDOM doesn't share localStorage
-      // between instances, so we test differently:
-      // We test that the loadLastBrew function works
+      // The brew complete screen should NOT be shown
+      const brewComplete = doc2.getElementById('brewComplete');
+      expect(brewComplete.classList.contains('show')).toBe(false);
+
+      // Step 0 should be available (ready to brew again)
+      const step0 = doc2.getElementById('step0');
+      expect(step0.classList.contains('available')).toBe(true);
+
+      dom2.window.close();
+    });
+
+    test('recipe with non-default ratio is restored correctly', () => {
+      const lastBrewData = JSON.stringify({
+        recipe: { water: 250, coffee: '16.7', bloom: '50', pour1: '100', pour2: '150', pour3: '200', pour4: '250' },
+        ratio: 15.0,
+        completedAt: Date.now()
+      });
+
+      const dom2 = new JSDOM(html, {
+        runScripts: 'dangerously',
+        pretendToBeVisual: true,
+        url: 'http://localhost',
+        beforeParse(window) {
+          window.localStorage.setItem('v60_last_brew', lastBrewData);
+        }
+      });
+      const doc2 = dom2.window.document;
+
+      // The slider should be set to the saved ratio
+      const slider2 = doc2.getElementById('ratioSlider');
+      expect(parseFloat(slider2.value)).toBe(15.0);
+
+      // Row 250g should be selected
+      const selected = doc2.querySelectorAll('#recipeTableBody tr.selected');
+      expect(selected.length).toBe(1);
+      expect(selected[0].dataset.water).toBe('250');
+
       dom2.window.close();
     });
 
@@ -217,22 +255,24 @@ describe('V60 Recipe — Last Brew Persistence', () => {
     });
 
     test('URL params take priority over last brew', () => {
-      // Save a last brew to localStorage
-      window.localStorage.setItem('v60_last_brew', JSON.stringify({
+      const lastBrewData = JSON.stringify({
         recipe: { water: 300 },
         ratio: 16.7,
         completedAt: Date.now()
-      }));
+      });
 
-      // Create a DOM with URL params
+      // Create a DOM with URL params AND last brew in localStorage
       const dom2 = new JSDOM(html, {
         runScripts: 'dangerously',
         pretendToBeVisual: true,
         url: 'http://localhost?water=250',
+        beforeParse(window) {
+          window.localStorage.setItem('v60_last_brew', lastBrewData);
+        }
       });
       const doc2 = dom2.window.document;
 
-      // The URL params should have selected water=250
+      // The URL params should have selected water=250 (not 300 from localStorage)
       const selected = doc2.querySelectorAll('#recipeTableBody tr.selected');
       expect(selected.length).toBe(1);
       expect(selected[0].dataset.water).toBe('250');

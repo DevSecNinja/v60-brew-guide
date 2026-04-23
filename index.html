@@ -1537,6 +1537,8 @@
     // --- Constants ---
     const DEFAULT_RATIO = 16.7;
     const STEP_COUNT = 6;
+    const BREW_AGAIN_DELAY_MS = 3000;     // Show "brew another one" button after 3s
+    const WAKE_LOCK_RELEASE_DELAY_MS = 10000; // Release wake lock 10s after brew completes
 
     // --- DOM refs ---
     const slider = document.getElementById('ratioSlider');
@@ -2280,15 +2282,15 @@
         saveLastBrew(selectedRecipe, parseFloat(slider.value));
       }
 
-      // Show "brew another one" button after 3 seconds
+      // Show "brew another one" button after delay
       brewCompleteTimers.push(setTimeout(() => {
         btnBrewAgain.classList.add('visible');
-      }, 3000));
+      }, BREW_AGAIN_DELAY_MS));
 
-      // Release wake lock after 10 seconds
+      // Release wake lock after delay
       brewCompleteTimers.push(setTimeout(() => {
         releaseWakeLock();
-      }, 10000));
+      }, WAKE_LOCK_RELEASE_DELAY_MS));
     }
 
     function clearBrewCompleteTimers() {
