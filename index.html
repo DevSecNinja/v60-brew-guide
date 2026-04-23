@@ -756,6 +756,75 @@
       background: linear-gradient(180deg, var(--selected-border), var(--highlight-border));
     }
 
+    /* FAQ section */
+    .faq-section {
+      margin-top: 1.5rem;
+    }
+
+    .faq-section h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+    }
+
+    .faq-item {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 0.6rem;
+      overflow: hidden;
+    }
+
+    .faq-item[open] {
+      padding-bottom: 0.25rem;
+    }
+
+    .faq-item > summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 0.9rem 1.25rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--espresso);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .faq-item > summary::-webkit-details-marker { display: none; }
+
+    .faq-item > summary::after {
+      content: "▸";
+      font-size: 0.9rem;
+      color: var(--accent);
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .faq-item[open] > summary::after {
+      transform: rotate(90deg);
+    }
+
+    .faq-item .faq-body {
+      padding: 0 1.25rem 1.1rem;
+      font-size: 0.92rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    .faq-item .faq-body p {
+      margin-bottom: 0.6rem;
+    }
+
+    .faq-item .faq-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .faq-item .faq-body strong {
+      color: var(--espresso);
+    }
+
     /* Footer */
     footer {
       text-align: center;
@@ -1149,6 +1218,57 @@
       <h2><span aria-hidden="true">❤️</span> My Favorites</h2>
       <p class="favorites-hint">Your saved recipes — tap to brew, click the note to add a description</p>
       <div id="favoritesList" class="favorites-list"></div>
+    </section>
+
+    <section class="faq-section">
+      <h2>Frequently Asked Questions</h2>
+
+      <details class="faq-item">
+        <summary>Why the V60, and what are the 01 and 02 sizes?</summary>
+        <div class="faq-body">
+          <p>The <strong>Hario V60</strong> is one of the most popular pour-over drippers thanks to its simple cone design and spiral ribs that let you control extraction through pour technique. The name comes from the <strong>V</strong>-shape of the cone and its <strong>60°</strong> angle.</p>
+          <p>The sizes refer to the dripper capacity: the <strong>01</strong> is designed for a single cup (up to roughly 200 g of water), while the <strong>02</strong> is the most common size and handles 1–2 cups comfortably (up to about 500 g). If you brew mostly for yourself, an 01 works fine — but an <strong>02 is the safer all-rounder</strong>.</p>
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>What equipment do I need?</summary>
+        <div class="faq-body">
+          <p>At a minimum you need a <strong>V60 dripper</strong>, <strong>V60 paper filters</strong>, a <strong>gooseneck kettle</strong> (the thin spout gives you the precise, controlled pour that a regular kettle can't), and a <strong>scale with a timer</strong> (0.1 g resolution is ideal).</p>
+          <p>A <strong>decanter or mug</strong> to brew into completes the basic setup. The <em>Hario V60 Drip Decanter 02</em> bundles the dripper and a glass carafe together — a great starter option.</p>
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>How should I prepare before brewing?</summary>
+        <div class="faq-body">
+          <p>Good preparation makes a real difference. Always <strong>rinse the paper filter</strong> with hot water before adding coffee — this removes the papery taste and preheats the dripper at the same time.</p>
+          <p>If your V60 is <strong>ceramic</strong>, give it an extra preheat by filling it with hot water for a few seconds, because ceramic absorbs a lot of heat. Plastic and metal drippers heat up quickly during the rinse. Also <strong>preheat your decanter or mug</strong> so the brewed coffee doesn't cool down on contact with cold glass.</p>
+          <p>Discard all the preheat water before you start brewing.</p>
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Why would I choose a V60 over an espresso machine?</summary>
+        <div class="faq-body">
+          <p>If you love espresso and cappuccino but also want a clean, flavourful <strong>filter-style coffee</strong> without spending a lot, the V60 is a great option. Bean-to-cup machines can struggle to deliver the clarity and nuance that a manual pour-over provides.</p>
+          <p>The V60 is <strong>inexpensive</strong>, takes up almost no space, and lets you experiment with grind size, ratio, and pour speed until you find your perfect cup. It's a fun and rewarding way to brew.</p>
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Do I need an expensive grinder?</summary>
+        <div class="faq-body">
+          <p>Not at all — pre-ground coffee works fine to get started. But freshly ground beans do make a noticeable difference in flavour. A solid upgrade on a budget is the <strong>KINGrinder K6</strong>, a manual hand grinder that punches well above its price class. Keep an eye out for <strong>Black Friday deals</strong> to pick one up even cheaper.</p>
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>Any bean recommendations?</summary>
+        <div class="faq-body">
+          <p>A good starting point from the supermarket is <strong>Café Intención Organic</strong> — it's widely available, fair-trade, and works well with the V60. As you get comfortable, try ordering single-origin beans from a local roaster — the V60 really shines at highlighting those unique flavour profiles.</p>
+        </div>
+      </details>
     </section>
   </main>
 
