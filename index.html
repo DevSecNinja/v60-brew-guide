@@ -1554,24 +1554,43 @@
     const favoritesSection = document.getElementById('favoritesSection');
     const favoritesList = document.getElementById('favoritesList');
 
+    // --- localStorage JSON helpers ---
+    // All persistence uses these so failures (Safari private mode, quota
+    // exceeded, etc.) degrade gracefully without breaking the app.
+    function readJSONStorage(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch (e) {
+        return fallback;
+      }
+    }
+
+    function writeJSONStorage(key, value) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch (e) {
+        // Silently fail if localStorage is not available
+      }
+    }
+
+    function removeStorage(key) {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        // Silently fail
+      }
+    }
+
     // --- Favorites state ---
     const FAVORITES_KEY = 'v60_favorites';
 
     function loadFavorites() {
-      try {
-        const data = localStorage.getItem(FAVORITES_KEY);
-        return data ? JSON.parse(data) : [];
-      } catch (e) {
-        return [];
-      }
+      return readJSONStorage(FAVORITES_KEY, []);
     }
 
     function saveFavorites(favorites) {
-      try {
-        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
-      } catch (e) {
-        // Silently fail if localStorage is not available
-      }
+      writeJSONStorage(FAVORITES_KEY, favorites);
     }
 
     function getFavoriteKey(ratio, water) {
@@ -1644,9 +1663,7 @@
       favorites.forEach(fav => {
         const isSelected = selectedRecipe && selectedRecipe.water === fav.water &&
           parseFloat(slider.value).toFixed(1) === parseFloat(fav.ratio).toFixed(1);
-        const descriptionHtml = fav.description
-          ? `<span class="favorite-description-text" data-key="${fav.key}">${fav.description}</span>`
-          : `<span class="favorite-description-text" data-key="${fav.key}"></span>`;
+        const descriptionHtml = `<span class="favorite-description-text" data-key="${fav.key}">${fav.description || ''}</span>`;
 
         html += `<div class="favorite-card${isSelected ? ' selected' : ''}" data-fav-key="${fav.key}" data-fav-ratio="${fav.ratio}" data-fav-water="${fav.water}" data-fav-coffee="${fav.coffee}" data-fav-bloom="${fav.bloom}" data-fav-pour1="${fav.pour1}" data-fav-pour2="${fav.pour2}" data-fav-pour3="${fav.pour3}" data-fav-pour4="${fav.pour4}">
           <div class="favorite-card-header">
@@ -1739,10 +1756,7 @@
       handleSliderInput();
 
       // Find and click the matching row
-      const rows = tableBody.querySelectorAll('tr');
-      const targetRow = Array.from(rows).find(r => parseInt(r.dataset.water) === water);
-      if (targetRow) {
-        selectRecipe(targetRow);
+      if (selectRecipeByWater(water)) {
         // Scroll all the way to the top
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
@@ -1752,32 +1766,19 @@
     const LAST_BREW_KEY = 'v60_last_brew';
 
     function saveLastBrew(recipe, ratio) {
-      try {
-        localStorage.setItem(LAST_BREW_KEY, JSON.stringify({
-          recipe: recipe,
-          ratio: ratio,
-          completedAt: Date.now()
-        }));
-      } catch (e) {
-        // Silently fail if localStorage is not available
-      }
+      writeJSONStorage(LAST_BREW_KEY, {
+        recipe: recipe,
+        ratio: ratio,
+        completedAt: Date.now()
+      });
     }
 
     function loadLastBrew() {
-      try {
-        const data = localStorage.getItem(LAST_BREW_KEY);
-        return data ? JSON.parse(data) : null;
-      } catch (e) {
-        return null;
-      }
+      return readJSONStorage(LAST_BREW_KEY, null);
     }
 
     function clearLastBrew() {
-      try {
-        localStorage.removeItem(LAST_BREW_KEY);
-      } catch (e) {
-        // Silently fail
-      }
+      removeStorage(LAST_BREW_KEY);
     }
 
     // --- Brew state ---
@@ -1789,8 +1790,18 @@
     let wakeLock = null; // WakeLock sentinel to keep screen on during brew
     let brewCompleteTimers = []; // timers for post-brew-complete actions
 
-    // Step durations in seconds: Bloom 45s, Pour 1 25s, Pour 2 20s, Pour 3 20s, Pour 4 15s, Drain 55s
-    const STEP_DURATIONS = [45, 25, 20, 20, 15, 55];
+    // Per-step metadata: duration (seconds) and completion notification copy.
+    // Durations are derived from James Hoffmann's improved V60 technique:
+    // Bloom 45s, Pour 1 25s, Pour 2 20s, Pour 3 20s, Pour 4 15s, Drain 55s.
+    const STEPS = [
+      { duration: 45, notifyTitle: '☕ Bloom Complete',  notifyBody: 'Time for the first pour' },
+      { duration: 25, notifyTitle: '☕ Pour 1 Complete', notifyBody: 'Time for the second pour' },
+      { duration: 20, notifyTitle: '☕ Pour 2 Complete', notifyBody: 'Time for the third pour' },
+      { duration: 20, notifyTitle: '☕ Pour 3 Complete', notifyBody: 'Time for the fourth pour' },
+      { duration: 15, notifyTitle: '☕ Pour 4 Complete', notifyBody: 'Time to swirl and let it drain' },
+      { duration: 55, notifyTitle: '☕ Coffee Ready!',   notifyBody: 'Your V60 coffee is ready to enjoy!' },
+    ];
+    const STEP_DURATIONS = STEPS.map(s => s.duration);
 
     // --- Wake Lock API ---
     // Pending promise to serialize wake lock requests
@@ -1926,11 +1937,7 @@
       if (waterRaw !== null) {
         const water = parseInt(waterRaw, 10);
         if (!isNaN(water)) {
-          const rows = tableBody.querySelectorAll('tr');
-          const targetRow = Array.from(rows).find(r => parseInt(r.dataset.water, 10) === water);
-          if (targetRow) {
-            selectRecipe(targetRow);
-          }
+          selectRecipeByWater(water);
         }
       }
     }
@@ -1988,6 +1995,18 @@
     }
 
     // --- Select a recipe row ---
+    // Find the table row matching the given water value and select it.
+    // Returns the row element, or null if no matching row exists.
+    function selectRecipeByWater(water) {
+      if (water == null || isNaN(water)) return null;
+      const targetRow = tableBody.querySelector(`tr[data-water="${water}"]`);
+      if (targetRow) {
+        selectRecipe(targetRow);
+        return targetRow;
+      }
+      return null;
+    }
+
     function selectRecipe(row) {
       const water = parseInt(row.dataset.water);
       const coffee = row.dataset.coffee;
@@ -2132,51 +2151,29 @@
     function showStepNotification(stepIndex) {
       if (notificationPermission !== 'granted') return;
 
-      const stepTitles = [
-        '☕ Bloom Complete',
-        '☕ Pour 1 Complete',
-        '☕ Pour 2 Complete',
-        '☕ Pour 3 Complete',
-        '☕ Pour 4 Complete',
-        '☕ Coffee Ready!'
-      ];
+      const step = STEPS[stepIndex];
+      if (!step) return;
 
-      const stepMessages = [
-        'Time for the first pour',
-        'Time for the second pour',
-        'Time for the third pour',
-        'Time for the fourth pour',
-        'Time to swirl and let it drain',
-        'Your V60 coffee is ready to enjoy!'
-      ];
+      const options = {
+        body: step.notifyBody,
+        icon: './icons/icon-192.png',
+        badge: './icons/icon-192.png',
+        tag: 'v60-step',
+        renotify: true,
+        requireInteraction: false,
+        vibrate: [200, 100, 200],
+        silent: false
+      };
 
       try {
         // Use service worker notification if available (better for iOS)
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
           navigator.serviceWorker.ready.then((registration) => {
-            registration.showNotification(stepTitles[stepIndex], {
-              body: stepMessages[stepIndex],
-              icon: './icons/icon-192.png',
-              badge: './icons/icon-192.png',
-              tag: 'v60-step',
-              renotify: true,
-              requireInteraction: false,
-              vibrate: [200, 100, 200],
-              silent: false
-            });
+            registration.showNotification(step.notifyTitle, options);
           });
         } else {
           // Fallback to regular notification
-          new Notification(stepTitles[stepIndex], {
-            body: stepMessages[stepIndex],
-            icon: './icons/icon-192.png',
-            badge: './icons/icon-192.png',
-            tag: 'v60-step',
-            renotify: true,
-            requireInteraction: false,
-            vibrate: [200, 100, 200],
-            silent: false
-          });
+          new Notification(step.notifyTitle, options);
         }
       } catch (error) {
         console.debug('Could not show notification:', error);
@@ -2408,11 +2405,7 @@
           handleSliderInput();
         }
         // Find and select the matching row
-        const rows = tableBody.querySelectorAll('tr');
-        const targetRow = Array.from(rows).find(r => parseInt(r.dataset.water, 10) === lastBrew.recipe.water);
-        if (targetRow) {
-          selectRecipe(targetRow);
-        }
+        selectRecipeByWater(lastBrew.recipe.water);
       }
     }
 

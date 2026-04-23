@@ -218,7 +218,7 @@ describe('iOS / iPadOS PWA — Notification grouping', () => {
   test('all showNotification / new Notification calls share a single tag for grouping', () => {
     // Collect every `tag:` value from notification option objects in the HTML.
     const tagMatches = [...html.matchAll(/tag\s*:\s*['"]([^'"]+)['"]/g)];
-    expect(tagMatches.length).toBeGreaterThanOrEqual(2); // SW path + fallback
+    expect(tagMatches.length).toBeGreaterThanOrEqual(1);
 
     const uniqueTags = new Set(tagMatches.map((m) => m[1]));
     // All notification calls must use exactly one shared tag value.
@@ -228,6 +228,11 @@ describe('iOS / iPadOS PWA — Notification grouping', () => {
     // so that iOS groups them into a single notification.
     const [tag] = uniqueTags;
     expect(tag).not.toMatch(/\+/); // no string concatenation
+
+    // Both notification call sites (SW path + fallback) must pass the same
+    // options object so the shared tag & renotify flag cannot drift.
+    expect(html).toMatch(/registration\.showNotification\s*\([^,]+,\s*options\s*\)/);
+    expect(html).toMatch(/new Notification\s*\([^,]+,\s*options\s*\)/);
   });
 
   test('notifications set renotify so the user is still alerted on each replacement', () => {
@@ -235,7 +240,7 @@ describe('iOS / iPadOS PWA — Notification grouping', () => {
     // plays the sound / vibration even though the notification is being
     // replaced rather than created fresh.
     const renotifyMatches = [...html.matchAll(/renotify\s*:\s*(true|false)/g)];
-    expect(renotifyMatches.length).toBeGreaterThanOrEqual(2); // SW path + fallback
+    expect(renotifyMatches.length).toBeGreaterThanOrEqual(1);
     renotifyMatches.forEach((m) => {
       expect(m[1]).toBe('true');
     });
