@@ -1748,6 +1748,16 @@
     const favoritesSection = document.getElementById('favoritesSection');
     const favoritesList = document.getElementById('favoritesList');
 
+    // --- HTML escaping helper ---
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     // --- localStorage JSON helpers ---
     // All persistence uses these so failures (Safari private mode, quota
     // exceeded, etc.) degrade gracefully without breaking the app.
@@ -1869,7 +1879,7 @@
         const isSelected = selectedRecipe && selectedRecipe.water === fav.water &&
           parseFloat(slider.value).toFixed(1) === parseFloat(fav.ratio).toFixed(1);
         const descriptionHtml = fav.description
-          ? `<div class="favorite-card-description"><span class="favorite-description-text" data-key="${fav.key}">${fav.description}</span></div>`
+          ? `<div class="favorite-card-description"><span class="favorite-description-text" data-key="${escapeHtml(fav.key)}">${escapeHtml(fav.description)}</span></div>`
           : '';
 
         html += `<div class="favorite-card${isSelected ? ' selected' : ''}" data-fav-key="${fav.key}" data-fav-ratio="${fav.ratio}" data-fav-water="${fav.water}" data-fav-coffee="${fav.coffee}" data-fav-bloom="${fav.bloom}" data-fav-pour1="${fav.pour1}" data-fav-pour2="${fav.pour2}" data-fav-pour3="${fav.pour3}" data-fav-pour4="${fav.pour4}">
@@ -1953,7 +1963,12 @@
         const newDescription = input.value.trim();
         updateFavoriteDescription(key, newDescription);
         if (newDescription) {
-          descDiv.innerHTML = `<span class="favorite-description-text" data-key="${key}">${newDescription}</span>`;
+          const span = document.createElement('span');
+          span.className = 'favorite-description-text';
+          span.dataset.key = key;
+          span.textContent = newDescription;
+          descDiv.innerHTML = '';
+          descDiv.appendChild(span);
         } else {
           descDiv.remove();
         }
