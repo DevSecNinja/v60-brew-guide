@@ -126,7 +126,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after {
       box-sizing: border-box;
@@ -148,6 +148,7 @@
     }
 
     :root {
+      --font-display: 'DM Serif Display', Georgia, 'Times New Roman', serif;
       --espresso: #3E2723;
       --dark-brown: #4E342E;
       --medium-brown: #5D4037;
@@ -171,6 +172,8 @@
       --shadow-lg: 0 4px 16px rgba(62, 39, 35, 0.16);
       --radius: 12px;
       --radius-sm: 8px;
+      --header-icon-bg: rgba(255, 255, 255, 0.1);
+      --header-icon-border: rgba(255, 255, 255, 0.22);
     }
 
     body {
@@ -184,24 +187,37 @@
     }
 
     header {
-      background: linear-gradient(135deg, var(--espresso), var(--dark-brown));
+      background: linear-gradient(160deg, var(--espresso) 0%, #4A2C26 55%, var(--dark-brown) 100%);
       color: var(--white);
-      padding: 1.25rem 1rem;
+      padding: 2rem 1rem 1.75rem;
       /* Extend brown header behind the iOS status bar / Dynamic Island */
-      padding-top: calc(1.25rem + env(safe-area-inset-top));
+      padding-top: calc(2rem + env(safe-area-inset-top));
       text-align: center;
     }
 
+    .header-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 3.25rem;
+      height: 3.25rem;
+      background: var(--header-icon-bg);
+      border: 1.5px solid var(--header-icon-border);
+      border-radius: 50%;
+      margin-bottom: 0.85rem;
+    }
+
     header h1 {
-      font-size: 1.75rem;
-      font-weight: 700;
-      margin-bottom: 0.25rem;
-      letter-spacing: -0.02em;
+      font-family: var(--font-display);
+      font-size: 2.1rem;
+      font-weight: 400;
+      margin-bottom: 0.4rem;
+      letter-spacing: 0.01em;
     }
 
     header p {
-      font-size: 0.95rem;
-      opacity: 0.85;
+      font-size: 0.9rem;
+      opacity: 0.78;
       font-weight: 400;
     }
 
@@ -230,6 +246,8 @@
       box-shadow: var(--shadow);
       padding: 1.25rem 1.5rem;
       margin-bottom: 1.5rem;
+      border: 1px solid rgba(141, 110, 99, 0.1);
+      border-top: 3px solid var(--accent);
     }
 
     /* New-user brewing tips (collapsible card) */
@@ -239,6 +257,7 @@
       box-shadow: var(--shadow);
       margin-bottom: 1.5rem;
       overflow: hidden;
+      border: 1px solid rgba(141, 110, 99, 0.1);
     }
 
     .brew-intro[open] {
@@ -261,15 +280,19 @@
     .brew-intro > summary::-webkit-details-marker { display: none; }
 
     .brew-intro > summary::after {
-      content: "▸";
-      font-size: 0.9rem;
-      color: var(--accent);
+      content: "";
+      display: inline-block;
+      width: 0.5rem;
+      height: 0.5rem;
+      border-right: 2px solid var(--accent);
+      border-bottom: 2px solid var(--accent);
+      transform: rotate(-45deg) translateY(-1px);
       transition: transform 0.2s ease;
       flex-shrink: 0;
     }
 
     .brew-intro[open] > summary::after {
-      transform: rotate(90deg);
+      transform: rotate(45deg) translateY(-3px);
     }
 
     .brew-intro .intro-body {
@@ -306,9 +329,11 @@
     }
 
     .brew-steps-header h2 {
-      font-size: 1.1rem;
-      font-weight: 600;
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      font-weight: 400;
       color: var(--espresso);
+      letter-spacing: 0.01em;
     }
 
     .brew-selected-recipe {
@@ -390,19 +415,29 @@
 
     .step.completed .step-label {
       color: var(--green-text);
+      background: rgba(102, 187, 106, 0.12);
     }
 
     .step.completed .step-timer {
       color: var(--green-text);
     }
 
+    .step.running .step-label {
+      color: var(--highlight-border);
+      background: rgba(255, 152, 0, 0.12);
+    }
+
     .step-label {
-      font-size: 0.75rem;
-      font-weight: 600;
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.07em;
       color: var(--accent);
-      margin-bottom: 0.25rem;
+      background: rgba(141, 110, 99, 0.1);
+      padding: 0.15rem 0.55rem;
+      border-radius: 100px;
+      margin-bottom: 0.35rem;
     }
 
     .step-detail {
@@ -573,13 +608,17 @@
       box-shadow: var(--shadow);
       padding: 1.25rem 1.5rem;
       margin-bottom: 1.5rem;
+      border: 1px solid rgba(141, 110, 99, 0.1);
+      border-top: 3px solid var(--accent);
     }
 
     .slider-section h2 {
-      font-size: 1.1rem;
-      font-weight: 600;
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      font-weight: 400;
       margin-bottom: 0.75rem;
       color: var(--espresso);
+      letter-spacing: 0.01em;
     }
 
     .slider-wrapper {
@@ -701,13 +740,17 @@
       box-shadow: var(--shadow);
       overflow: hidden;
       margin-bottom: 1.5rem;
+      border: 1px solid rgba(141, 110, 99, 0.1);
+      border-top: 3px solid var(--accent);
     }
 
     .table-section h2 {
-      font-size: 1.1rem;
-      font-weight: 600;
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      font-weight: 400;
       padding: 1.25rem 1.5rem 0.25rem;
       color: var(--espresso);
+      letter-spacing: 0.01em;
     }
 
     .table-hint {
@@ -844,9 +887,11 @@
     }
 
     .faq-section h2 {
-      font-size: 1.1rem;
-      font-weight: 600;
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      font-weight: 400;
       margin-bottom: 0.75rem;
+      letter-spacing: 0.01em;
     }
 
     .faq-item {
@@ -855,6 +900,7 @@
       box-shadow: var(--shadow);
       margin-bottom: 0.6rem;
       overflow: hidden;
+      border: 1px solid rgba(141, 110, 99, 0.1);
     }
 
     .faq-item[open] {
@@ -877,15 +923,19 @@
     .faq-item > summary::-webkit-details-marker { display: none; }
 
     .faq-item > summary::after {
-      content: "▸";
-      font-size: 0.9rem;
-      color: var(--accent);
+      content: "";
+      display: inline-block;
+      width: 0.5rem;
+      height: 0.5rem;
+      border-right: 2px solid var(--accent);
+      border-bottom: 2px solid var(--accent);
+      transform: rotate(-45deg) translateY(-1px);
       transition: transform 0.2s ease;
       flex-shrink: 0;
     }
 
     .faq-item[open] > summary::after {
-      transform: rotate(90deg);
+      transform: rotate(45deg) translateY(-3px);
     }
 
     .faq-item .faq-body {
@@ -1010,13 +1060,17 @@
       box-shadow: var(--shadow);
       padding: 1.25rem 1.5rem;
       margin-top: 1.5rem;
+      border: 1px solid rgba(141, 110, 99, 0.1);
+      border-top: 3px solid var(--favorite-color);
     }
 
     .favorites-section h2 {
-      font-size: 1.1rem;
-      font-weight: 600;
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      font-weight: 400;
       color: var(--espresso);
       margin-bottom: 0.25rem;
+      letter-spacing: 0.01em;
     }
 
     .favorites-hint {
@@ -1134,15 +1188,21 @@
     /* Responsive */
     @media (max-width: 480px) {
       header {
-        padding: 1rem 1rem;
+        padding: 1.5rem 1rem 1.25rem;
         /* Preserve safe-area inset so content stays below the iOS
            status bar / Dynamic Island (the shorthand above would
-           otherwise reset padding-top to 1rem). */
-        padding-top: calc(1rem + env(safe-area-inset-top));
+           otherwise reset padding-top to 1.5rem). */
+        padding-top: calc(1.5rem + env(safe-area-inset-top));
       }
 
       header h1 {
-        font-size: 1.4rem;
+        font-size: 1.75rem;
+      }
+
+      .header-icon {
+        width: 2.75rem;
+        height: 2.75rem;
+        margin-bottom: 0.65rem;
       }
 
       main {
@@ -1273,6 +1333,8 @@
         --favorite-bg: #3B1515;
         --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
+        --header-icon-bg: rgba(245, 230, 211, 0.08);
+        --header-icon-border: rgba(245, 230, 211, 0.18);
       }
 
       a {
@@ -1280,7 +1342,7 @@
       }
 
       header {
-        background: linear-gradient(135deg, #2C1E1A, #1C1210);
+        background: linear-gradient(160deg, #2C1E1A 0%, #221713 55%, #1C1210 100%);
         color: #F5E6D3;
       }
 
@@ -1337,12 +1399,37 @@
       .table-wrapper thead th {
         background: var(--cream);
       }
+
+      /* Dark-mode card borders */
+      .brew-steps,
+      .brew-intro,
+      .slider-section,
+      .table-section,
+      .faq-item,
+      .favorites-section {
+        border-color: rgba(188, 170, 164, 0.12);
+      }
+
+      /* Dark-mode step-label pill */
+      .step-label {
+        background: rgba(188, 170, 164, 0.12);
+      }
     }
   </style>
 </head>
 <body>
   <header>
-    <h1><img src="icons/V60.icon/Assets/logo-transparent.png" alt="V60 Logo" style="height: 1.5em; vertical-align: middle; margin-right: 0.5rem;"> V60 Brew Guide</h1>
+    <div class="header-icon" aria-hidden="true">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 54" fill="none" width="22" height="25" role="presentation">
+        <rect x="2" y="2" width="44" height="8" rx="4" stroke="white" stroke-width="2.5"/>
+        <path d="M6 10 L24 50 L42 10" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M13 18 Q24 15.5 35 18" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.65"/>
+        <path d="M16 26 Q24 23.5 32 26" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.5"/>
+        <path d="M18 34 Q24 31.5 30 34" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.35"/>
+        <circle cx="24" cy="50" r="3" fill="white"/>
+      </svg>
+    </div>
+    <h1>V60 Brew Guide</h1>
     <p>Based on <a href="https://www.youtube.com/watch?v=1oB1oDrDkHM" target="_blank" rel="noopener">James Hoffmann's Ultimate V60 Technique</a></p>
   </header>
 

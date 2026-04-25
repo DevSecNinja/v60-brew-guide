@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>V60 Brew Guide Icon</title>
+  <!-- Background -->
+  <rect width="512" height="512" fill="#3E2723"/>
+  <!-- V60 Dripper centered and scaled to fill ~72% of the icon area -->
+  <!-- Original viewBox: 0 0 48 54, scaled by 7.11 and centered -->
+  <!-- Width: 48*7.11=341, Height: 54*7.11=384 -->
+  <!-- Offset: x=(512-341)/2=86, y=(512-384)/2=64 -->
+  <g transform="translate(86, 64) scale(7.104)">
+    <!-- Top rim/flange -->
+    <rect x="2" y="2" width="44" height="8" rx="4" stroke="#EFEBE9" stroke-width="2.5" fill="none"/>
+    <!-- Cone body -->
+    <path d="M6 10 L24 50 L42 10" stroke="#EFEBE9" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <!-- Spiral ribs -->
+    <path d="M13 18 Q24 15.5 35 18" stroke="#EFEBE9" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.65" fill="none"/>
+    <path d="M16 26 Q24 23.5 32 26" stroke="#EFEBE9" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.5" fill="none"/>
+    <path d="M18 34 Q24 31.5 30 34" stroke="#EFEBE9" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.35" fill="none"/>
+    <!-- Bottom drip hole -->
+    <circle cx="24" cy="50" r="3" fill="#EFEBE9"/>
+  </g>
+</svg>
