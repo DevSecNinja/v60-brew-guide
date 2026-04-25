@@ -47,6 +47,7 @@ fi
 # Source directory and files
 ICON_DIR="icons"
 SOURCE_SVG="$ICON_DIR/icon-source.svg"
+ICON_BACKGROUND="#3E2723"
 
 # Determine source icon
 if [ -f "$SOURCE_SVG" ]; then
@@ -74,12 +75,15 @@ convert_icon() {
         # the solid icon background.
         local padded_size=$((size * 80 / 100))
         local temp_icon
-        temp_icon=$(mktemp)
+        temp_icon=$(mktemp) || {
+            echo -e "${YELLOW}Error: Failed to create temporary icon file${NC}"
+            exit 1
+        }
 
         rsvg-convert -w "$size" -h "$size" "$SOURCE_SVG" -o "$temp_icon"
         convert "$temp_icon" \
             -resize "${padded_size}x${padded_size}" \
-            -background "#3E2723" \
+            -background "$ICON_BACKGROUND" \
             -gravity center \
             -extent "${size}x${size}" \
             -quality 95 \
