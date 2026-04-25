@@ -300,6 +300,10 @@ describe('V60 Recipe Calculator — Favorites Feature', () => {
       expect(typeof window.moveFavorite).toBe('function');
     });
 
+    test('reorderFavorite function is defined', () => {
+      expect(typeof window.reorderFavorite).toBe('function');
+    });
+
     test('moveFavorite moves a favorite up', () => {
       window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
       window.toggleFavorite('16.7', 300, '18.0', '60', '150', '300');
@@ -334,23 +338,36 @@ describe('V60 Recipe Calculator — Favorites Feature', () => {
       expect(favorites[1].water).toBe(300);
     });
 
-    test('favorite cards have move up and down buttons', () => {
+    test('reorderFavorite moves src to target position', () => {
       window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
       window.toggleFavorite('16.7', 300, '18.0', '60', '150', '300');
-      const moveUp = doc.querySelector('.btn-move-favorite[data-direction="up"]');
-      const moveDown = doc.querySelector('.btn-move-favorite[data-direction="down"]');
-      expect(moveUp).not.toBeNull();
-      expect(moveDown).not.toBeNull();
+      window.toggleFavorite('16.7', 350, '21.0', '70', '175', '350');
+      window.reorderFavorite('16.7:350', '16.7:250');
+      const favorites = window.loadFavorites();
+      expect(favorites[0].water).toBe(350);
+      expect(favorites[1].water).toBe(250);
+      expect(favorites[2].water).toBe(300);
     });
 
-    test('first card up button is disabled, last card down button is disabled', () => {
+    test('reorderFavorite does nothing for same src and target', () => {
       window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
       window.toggleFavorite('16.7', 300, '18.0', '60', '150', '300');
-      const cards = doc.querySelectorAll('.favorite-card');
-      const firstUpBtn = cards[0].querySelector('.btn-move-favorite[data-direction="up"]');
-      const lastDownBtn = cards[cards.length - 1].querySelector('.btn-move-favorite[data-direction="down"]');
-      expect(firstUpBtn.disabled).toBe(true);
-      expect(lastDownBtn.disabled).toBe(true);
+      window.reorderFavorite('16.7:250', '16.7:250');
+      const favorites = window.loadFavorites();
+      expect(favorites[0].water).toBe(250);
+    });
+
+    test('favorite cards have a drag handle', () => {
+      window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
+      window.toggleFavorite('16.7', 300, '18.0', '60', '150', '300');
+      const handles = doc.querySelectorAll('.favorite-drag-handle');
+      expect(handles.length).toBe(2);
+    });
+
+    test('favorite cards are draggable', () => {
+      window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
+      const card = doc.querySelector('.favorite-card');
+      expect(card.getAttribute('draggable')).toBe('true');
     });
   });
 });

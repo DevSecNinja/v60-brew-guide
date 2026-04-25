@@ -1098,9 +1098,11 @@
       background: var(--cream-light);
       border: 1px solid var(--cream);
       border-radius: var(--radius-sm);
-      padding: 0.75rem 1rem;
-      cursor: pointer;
+      cursor: default;
       transition: background-color 0.15s, box-shadow 0.15s;
+      display: flex;
+      align-items: stretch;
+      user-select: none;
     }
 
     .favorite-card:hover {
@@ -1111,6 +1113,45 @@
     .favorite-card.selected {
       background: var(--selected-bg);
       border-color: var(--selected-border);
+    }
+
+    .favorite-card.dragging {
+      opacity: 0.45;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .favorite-card.drag-over {
+      border-color: var(--accent);
+      background: var(--cream);
+      box-shadow: var(--shadow);
+    }
+
+    .favorite-drag-handle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.75rem 0.4rem 0.75rem 0.75rem;
+      color: var(--light-accent);
+      font-size: 1rem;
+      cursor: grab;
+      touch-action: none;
+      flex-shrink: 0;
+      transition: color 0.15s;
+    }
+
+    .favorite-drag-handle:hover {
+      color: var(--accent);
+    }
+
+    .favorite-drag-handle:active {
+      cursor: grabbing;
+      color: var(--accent);
+    }
+
+    .favorite-card-content {
+      flex: 1;
+      min-width: 0;
+      padding: 0.75rem 1rem 0.75rem 0.4rem;
     }
 
     .favorite-card-header {
@@ -1166,26 +1207,6 @@
 
     .btn-edit-favorite:hover {
       color: var(--accent);
-    }
-
-    .btn-move-favorite {
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 0.8rem;
-      padding: 0.2rem 0.3rem;
-      color: var(--light-accent);
-      transition: color 0.15s;
-      line-height: 1;
-    }
-
-    .btn-move-favorite:hover {
-      color: var(--accent);
-    }
-
-    .btn-move-favorite:disabled {
-      opacity: 0.25;
-      cursor: default;
     }
 
     .favorite-card-description {
@@ -1301,8 +1322,7 @@
 
     .btn-favorite,
     .btn-remove-favorite,
-    .btn-edit-favorite,
-    .btn-move-favorite {
+    .btn-edit-favorite {
       min-height: 44px;
       min-width: 44px;
       display: inline-flex;
@@ -1599,7 +1619,7 @@
 
     <section class="favorites-section" id="favoritesSection" style="display:none;">
       <h2><span aria-hidden="true">❤️</span> My Favorites</h2>
-      <p class="favorites-hint">Your saved recipes — tap to brew, use ✏ to add or edit a note, use ↑↓ to reorder</p>
+      <p class="favorites-hint">Your saved recipes — tap to brew, use ✏ to add or edit a note, drag ☰ to reorder</p>
       <div id="favoritesList" class="favorites-list"></div>
     </section>
 
@@ -1865,6 +1885,104 @@
       renderFavorites();
     }
 
+    function reorderFavorite(srcKey, targetKey) {
+      const favorites = loadFavorites();
+      const srcIdx = favorites.findIndex(f => f.key === srcKey);
+      const targetIdx = favorites.findIndex(f => f.key === targetKey);
+      if (srcIdx < 0 || targetIdx < 0 || srcIdx === targetIdx) return;
+      const [item] = favorites.splice(srcIdx, 1);
+      favorites.splice(targetIdx, 0, item);
+      saveFavorites(favorites);
+      renderFavorites();
+    }
+
+    function attachFavoritesDragDrop(list) {
+      let dragSrcKey = null;
+
+      // --- HTML5 drag-and-drop (desktop & Android Chrome) ---
+      list.querySelectorAll('.favorite-card').forEach(card => {
+        card.addEventListener('dragstart', (e) => {
+          dragSrcKey = card.dataset.favKey;
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', dragSrcKey);
+          // Defer class so the browser captures a clean drag image first
+          requestAnimationFrame(() => card.classList.add('dragging'));
+        });
+
+        card.addEventListener('dragend', () => {
+          card.classList.remove('dragging');
+          list.querySelectorAll('.favorite-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+          dragSrcKey = null;
+        });
+
+        card.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          if (card.dataset.favKey !== dragSrcKey) {
+            list.querySelectorAll('.favorite-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+            card.classList.add('drag-over');
+          }
+        });
+
+        card.addEventListener('dragleave', (e) => {
+          if (!card.contains(e.relatedTarget)) {
+            card.classList.remove('drag-over');
+          }
+        });
+
+        card.addEventListener('drop', (e) => {
+          e.preventDefault();
+          card.classList.remove('drag-over');
+          const targetKey = card.dataset.favKey;
+          if (dragSrcKey && targetKey && dragSrcKey !== targetKey) {
+            reorderFavorite(dragSrcKey, targetKey);
+          }
+        });
+      });
+
+      // --- Touch drag-and-drop (iOS / Android touch) ---
+      let touchDragKey = null;
+      let touchDropTarget = null;
+
+      list.querySelectorAll('.favorite-drag-handle').forEach(handle => {
+        handle.addEventListener('touchstart', (e) => {
+          const card = handle.closest('.favorite-card');
+          touchDragKey = card.dataset.favKey;
+          touchDropTarget = null;
+          card.classList.add('dragging');
+          e.stopPropagation();
+        }, { passive: true });
+      });
+
+      list.addEventListener('touchmove', (e) => {
+        if (!touchDragKey) return;
+        const touch = e.touches[0];
+        list.querySelectorAll('.favorite-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+        touchDropTarget = null;
+        list.querySelectorAll('.favorite-card').forEach(card => {
+          if (card.dataset.favKey === touchDragKey) return;
+          const rect = card.getBoundingClientRect();
+          if (touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+            card.classList.add('drag-over');
+            touchDropTarget = card;
+          }
+        });
+      }, { passive: true });
+
+      list.addEventListener('touchend', () => {
+        if (!touchDragKey) return;
+        list.querySelectorAll('.favorite-card').forEach(c => {
+          c.classList.remove('dragging');
+          c.classList.remove('drag-over');
+        });
+        if (touchDropTarget && touchDropTarget.dataset.favKey !== touchDragKey) {
+          reorderFavorite(touchDragKey, touchDropTarget.dataset.favKey);
+        }
+        touchDragKey = null;
+        touchDropTarget = null;
+      }, { passive: true });
+    }
+
     function renderFavorites() {
       const favorites = loadFavorites();
       if (favorites.length === 0) {
@@ -1875,7 +1993,7 @@
       favoritesSection.style.display = '';
       let html = '';
 
-      favorites.forEach((fav, idx) => {
+      favorites.forEach((fav) => {
         const isSelected = selectedRecipe && selectedRecipe.water === fav.water &&
           parseFloat(slider.value).toFixed(1) === parseFloat(fav.ratio).toFixed(1);
         const safeKey = escapeHtml(fav.key);
@@ -1883,20 +2001,21 @@
           ? `<div class="favorite-card-description"><span class="favorite-description-text" data-key="${safeKey}">${escapeHtml(fav.description)}</span></div>`
           : '';
 
-        html += `<div class="favorite-card${isSelected ? ' selected' : ''}" data-fav-key="${safeKey}" data-fav-ratio="${fav.ratio}" data-fav-water="${fav.water}" data-fav-coffee="${fav.coffee}" data-fav-bloom="${fav.bloom}" data-fav-pour1="${fav.pour1}" data-fav-pour2="${fav.pour2}" data-fav-pour3="${fav.pour3}" data-fav-pour4="${fav.pour4}">
-          <div class="favorite-card-header">
-            <div>
-              <span class="favorite-card-recipe">${fav.water}g water / ${fav.coffee}g coffee</span>
-              <span class="favorite-card-ratio">1:${parseFloat(fav.ratio).toFixed(1)}</span>
+        html += `<div class="favorite-card${isSelected ? ' selected' : ''}" draggable="true" data-fav-key="${safeKey}" data-fav-ratio="${fav.ratio}" data-fav-water="${fav.water}" data-fav-coffee="${fav.coffee}" data-fav-bloom="${fav.bloom}" data-fav-pour1="${fav.pour1}" data-fav-pour2="${fav.pour2}" data-fav-pour3="${fav.pour3}" data-fav-pour4="${fav.pour4}">
+          <span class="favorite-drag-handle" aria-label="Drag to reorder" title="Drag to reorder">☰</span>
+          <div class="favorite-card-content">
+            <div class="favorite-card-header">
+              <div>
+                <span class="favorite-card-recipe">${fav.water}g water / ${fav.coffee}g coffee</span>
+                <span class="favorite-card-ratio">1:${parseFloat(fav.ratio).toFixed(1)}</span>
+              </div>
+              <div class="favorite-card-actions">
+                <button type="button" class="btn-edit-favorite" data-key="${safeKey}" aria-label="Edit note" title="Edit note">✏</button>
+                <button type="button" class="btn-remove-favorite" data-key="${safeKey}" aria-label="Remove favorite" title="Remove favorite">✕</button>
+              </div>
             </div>
-            <div class="favorite-card-actions">
-              <button type="button" class="btn-move-favorite" data-key="${safeKey}" data-direction="up" aria-label="Move up" title="Move up"${idx === 0 ? ' disabled' : ''}>↑</button>
-              <button type="button" class="btn-move-favorite" data-key="${safeKey}" data-direction="down" aria-label="Move down" title="Move down"${idx === favorites.length - 1 ? ' disabled' : ''}>↓</button>
-              <button type="button" class="btn-edit-favorite" data-key="${safeKey}" aria-label="Edit note" title="Edit note">✏</button>
-              <button type="button" class="btn-remove-favorite" data-key="${safeKey}" aria-label="Remove favorite" title="Remove favorite">✕</button>
-            </div>
-          </div>
-          ${descriptionHtml}</div>`;
+            ${descriptionHtml}
+          </div></div>`;
       });
 
       favoritesList.innerHTML = html;
@@ -1906,7 +2025,7 @@
         card.addEventListener('click', (e) => {
           if (e.target.closest('.btn-remove-favorite') ||
               e.target.closest('.btn-edit-favorite') ||
-              e.target.closest('.btn-move-favorite') ||
+              e.target.closest('.favorite-drag-handle') ||
               e.target.closest('.favorite-description-input')) return;
           selectFavoriteRecipe(card);
         });
@@ -1929,13 +2048,8 @@
         });
       });
 
-      // Attach move handlers
-      favoritesList.querySelectorAll('.btn-move-favorite').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          moveFavorite(btn.dataset.key, btn.dataset.direction);
-        });
-      });
+      // Drag-and-drop reordering
+      attachFavoritesDragDrop(favoritesList);
     }
 
     function startEditDescription(key, card) {
