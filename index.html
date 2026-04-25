@@ -173,6 +173,7 @@
       --radius-sm: 8px;
       --header-icon-bg: rgba(255, 255, 255, 0.1);
       --header-icon-border: rgba(255, 255, 255, 0.22);
+      --header-logo-centering-offset: 0.05rem;
     }
 
     body {
@@ -211,7 +212,7 @@
       color: var(--white);
       width: 2rem;
       height: auto;
-      transform: translateX(0.05rem);
+      transform: translateX(var(--header-logo-centering-offset));
     }
 
     header h1 {

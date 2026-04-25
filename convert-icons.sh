@@ -2,6 +2,8 @@
 
 # V60 Recipe Icon Conversion Script
 # Converts the high-resolution logo to all required icon sizes for web and PWA
+# Requires ImageMagick and librsvg. On Linux and macOS, missing tools are
+# installed automatically via apt-get or Homebrew to match the existing workflow.
 
 set -e
 
@@ -72,7 +74,7 @@ convert_icon() {
         # the solid icon background.
         local padded_size=$((size * 80 / 100))
         local temp_icon
-        temp_icon=$(mktemp "/tmp/v60-icon-${size}.XXXXXX.png")
+        temp_icon=$(mktemp)
 
         rsvg-convert -w "$size" -h "$size" "$SOURCE_SVG" -o "$temp_icon"
         convert "$temp_icon" \
