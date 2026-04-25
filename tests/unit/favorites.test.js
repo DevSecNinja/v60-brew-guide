@@ -237,10 +237,17 @@ describe('V60 Recipe Calculator — Favorites Feature', () => {
       expect(removeBtn.getAttribute('aria-label')).toBe('Remove favorite');
     });
 
-    test('favorite card has a description area', () => {
+    test('favorite card has an edit note button', () => {
       window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
-      const descText = doc.querySelector('.favorite-description-text');
-      expect(descText).not.toBeNull();
+      const editBtn = doc.querySelector('.btn-edit-favorite');
+      expect(editBtn).not.toBeNull();
+      expect(editBtn.getAttribute('aria-label')).toBe('Edit note');
+    });
+
+    test('favorite card does not show description area when note is empty', () => {
+      window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
+      const descArea = doc.querySelector('.favorite-card-description');
+      expect(descArea).toBeNull();
     });
 
     test('favorite card shows saved description', () => {
@@ -285,6 +292,82 @@ describe('V60 Recipe Calculator — Favorites Feature', () => {
       const favBtn = firstRow.querySelector('.btn-favorite');
       expect(favBtn.classList.contains('favorited')).toBe(true);
       expect(favBtn.textContent.trim()).toBe('♥');
+    });
+  });
+
+  describe('Favorites re-ordering', () => {
+    test('moveFavorite function is defined', () => {
+      expect(typeof window.moveFavorite).toBe('function');
+    });
+
+    test('reorderFavorite function is defined', () => {
+      expect(typeof window.reorderFavorite).toBe('function');
+    });
+
+    test('moveFavorite moves a favorite up', () => {
+      window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
+      window.toggleFavorite('16.7', 300, '18.0', '60', '150', '300');
+      window.moveFavorite('16.7:300', 'up');
+      const favorites = window.loadFavorites();
+      expect(favorites[0].water).toBe(300);
+      expect(favorites[1].water).toBe(250);
+    });
+
+    test('moveFavorite moves a favorite down', () => {
+      window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
+      window.toggleFavorite('16.7', 300, '18.0', '60', '150', '300');
+      window.moveFavorite('16.7:250', 'down');
+      const favorites = window.loadFavorites();
+      expect(favorites[0].water).toBe(300);
+      expect(favorites[1].water).toBe(250);
+    });
+
+    test('moveFavorite does nothing if moving first item up', () => {
+      window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
+      window.toggleFavorite('16.7', 300, '18.0', '60', '150', '300');
+      window.moveFavorite('16.7:250', 'up');
+      const favorites = window.loadFavorites();
+      expect(favorites[0].water).toBe(250);
+    });
+
+    test('moveFavorite does nothing if moving last item down', () => {
+      window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
+      window.toggleFavorite('16.7', 300, '18.0', '60', '150', '300');
+      window.moveFavorite('16.7:300', 'down');
+      const favorites = window.loadFavorites();
+      expect(favorites[1].water).toBe(300);
+    });
+
+    test('reorderFavorite moves src to target position', () => {
+      window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
+      window.toggleFavorite('16.7', 300, '18.0', '60', '150', '300');
+      window.toggleFavorite('16.7', 350, '21.0', '70', '175', '350');
+      window.reorderFavorite('16.7:350', '16.7:250');
+      const favorites = window.loadFavorites();
+      expect(favorites[0].water).toBe(350);
+      expect(favorites[1].water).toBe(250);
+      expect(favorites[2].water).toBe(300);
+    });
+
+    test('reorderFavorite does nothing for same src and target', () => {
+      window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
+      window.toggleFavorite('16.7', 300, '18.0', '60', '150', '300');
+      window.reorderFavorite('16.7:250', '16.7:250');
+      const favorites = window.loadFavorites();
+      expect(favorites[0].water).toBe(250);
+    });
+
+    test('favorite cards have a drag handle', () => {
+      window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
+      window.toggleFavorite('16.7', 300, '18.0', '60', '150', '300');
+      const handles = doc.querySelectorAll('.favorite-drag-handle');
+      expect(handles.length).toBe(2);
+    });
+
+    test('favorite cards are draggable', () => {
+      window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
+      const card = doc.querySelector('.favorite-card');
+      expect(card.getAttribute('draggable')).toBe('true');
     });
   });
 });
