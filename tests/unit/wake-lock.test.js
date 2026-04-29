@@ -137,6 +137,18 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
       return row;
     }
 
+    function completeBrew() {
+      const step0 = doc.getElementById('step0');
+      step0.click(); // countdown
+      step0.click(); // running
+      step0.click(); // complete (auto-starts step 1)
+      // Steps 1–5 are auto-started; one click each to complete
+      for (let i = 1; i < 6; i++) {
+        const step = doc.getElementById('step' + i);
+        step.click(); // complete (already running)
+      }
+    }
+
     test('requestWakeLock is called when a recipe is selected', () => {
       const originalRequestWakeLock = window.requestWakeLock;
       let wakeLockCalled = false;
@@ -181,21 +193,20 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
       let wakeLockCallCount = 0;
 
       // Select the recipe first (this itself triggers one wake lock request),
-      // then start step 0 (also calls requestWakeLock as a failsafe — see above),
-      // then reset the counter so we only measure calls from steps 1+.
+      // then start step 0 (also calls requestWakeLock as a failsafe — see above).
       selectRow(250);
       const step0 = doc.getElementById('step0');
       step0.click(); // start step 0 (calls requestWakeLock once)
-      step0.click(); // complete step 0 → step 1 auto-starts
+      step0.click(); // skip countdown → running
 
+      // Now reset the counter so we only measure calls from steps 1+.
       window.requestWakeLock = () => {
         wakeLockCallCount++;
         return Promise.resolve(false);
       };
 
-      // Start second step — should NOT call requestWakeLock
-      const step1 = doc.getElementById('step1');
-      step1.click(); // start step 1
+      // Complete step 0, which auto-starts step 1 — should NOT call requestWakeLock
+      step0.click();
 
       expect(wakeLockCallCount).toBe(0);
 
@@ -239,12 +250,7 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
 
       selectRow(250);
 
-      // Complete all steps
-      for (let i = 0; i < 6; i++) {
-        const step = doc.getElementById('step' + i);
-        step.click(); // start
-        step.click(); // complete
-      }
+      completeBrew();
 
       // Intercept wake lock calls after brew completion
       window.requestWakeLock = () => {
@@ -277,12 +283,7 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
 
       selectRow(250);
 
-      // Complete all steps
-      for (let i = 0; i < 6; i++) {
-        const step = doc.getElementById('step' + i);
-        step.click(); // start
-        step.click(); // complete
-      }
+      completeBrew();
 
       expect(releaseCalled).toBe(true);
 
