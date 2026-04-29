@@ -103,10 +103,15 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
     test('returns false when all steps are completed', () => {
       selectRow(250);
       // Complete all steps
-      for (let i = 0; i < 6; i++) {
+      // Step 0 needs 3 clicks: available → countdown → running → completed
+      const step0 = doc.getElementById('step0');
+      step0.click(); // countdown
+      step0.click(); // running
+      step0.click(); // completed (auto-starts step 1)
+      // Steps 1–5 are auto-started; one click each to complete
+      for (let i = 1; i < 6; i++) {
         const step = doc.getElementById('step' + i);
-        step.click(); // start
-        step.click(); // complete
+        step.click(); // complete (already running)
       }
       expect(window.isBrewRunning()).toBe(false);
     });
