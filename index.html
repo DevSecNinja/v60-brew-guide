@@ -2741,7 +2741,7 @@
       // Animate the initial number
       const timerEl = document.getElementById('step' + stepIndex + 'Timer');
       timerEl.classList.remove('countdown-pop');
-      void timerEl.offsetWidth; // force reflow to restart animation
+      timerEl.offsetWidth; // force reflow to restart animation
       timerEl.classList.add('countdown-pop');
 
       countdownTimer = setInterval(() => {
@@ -2755,7 +2755,7 @@
           // Re-trigger animation for each new number
           const el = document.getElementById('step' + stepIndex + 'Timer');
           el.classList.remove('countdown-pop');
-          void el.offsetWidth;
+          el.offsetWidth; // force reflow to restart animation
           el.classList.add('countdown-pop');
         }
       }, 1000);
