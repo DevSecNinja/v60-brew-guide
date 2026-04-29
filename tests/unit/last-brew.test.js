@@ -82,10 +82,15 @@ describe('V60 Recipe — Last Brew Persistence', () => {
       const rows = doc.querySelectorAll('#recipeTableBody tr');
       const row = Array.from(rows).find(r => r.dataset.water === String(waterAmount));
       row.click();
-      for (let i = 0; i < 6; i++) {
+      // Step 0 needs 3 clicks: available → countdown → running → completed
+      const step0 = doc.getElementById('step0');
+      step0.click(); // countdown
+      step0.click(); // running
+      step0.click(); // completed (auto-starts step 1)
+      // Steps 1–5 are auto-started; one click each to complete
+      for (let i = 1; i < 6; i++) {
         const step = doc.getElementById('step' + i);
-        step.click(); // start
-        step.click(); // complete
+        step.click(); // complete (already running)
       }
     }
 
@@ -105,10 +110,15 @@ describe('V60 Recipe — Last Brew Persistence', () => {
       const rows = doc.querySelectorAll('#recipeTableBody tr');
       const row = Array.from(rows).find(r => r.dataset.water === '300');
       row.click();
-      for (let i = 0; i < 6; i++) {
+      // Step 0: 3 clicks (available → countdown → running → completed)
+      const step0 = doc.getElementById('step0');
+      step0.click(); // countdown
+      step0.click(); // running (cancels countdown)
+      step0.click(); // completed (auto-starts step 1)
+      // Steps 1–5 are auto-started; one click each to complete
+      for (let i = 1; i < 6; i++) {
         const step = doc.getElementById('step' + i);
-        step.click(); // start
-        step.click(); // complete
+        step.click(); // complete (already running)
       }
 
       const lastBrew = window.loadLastBrew();
@@ -134,10 +144,15 @@ describe('V60 Recipe — Last Brew Persistence', () => {
       const rows = doc.querySelectorAll('#recipeTableBody tr');
       const row = Array.from(rows).find(r => r.dataset.water === '250');
       row.click();
-      for (let i = 0; i < 6; i++) {
+      // Step 0: 3 clicks (available → countdown → running → completed)
+      const step0 = doc.getElementById('step0');
+      step0.click(); // countdown
+      step0.click(); // running (cancels countdown)
+      step0.click(); // completed (auto-starts step 1)
+      // Steps 1–5 are auto-started; one click each to complete
+      for (let i = 1; i < 6; i++) {
         const step = doc.getElementById('step' + i);
-        step.click();
-        step.click();
+        step.click(); // complete (already running)
       }
 
       const btn = doc.getElementById('btnBrewAgain');
@@ -157,10 +172,15 @@ describe('V60 Recipe — Last Brew Persistence', () => {
       const rows = doc.querySelectorAll('#recipeTableBody tr');
       const row = Array.from(rows).find(r => r.dataset.water === '250');
       row.click();
-      for (let i = 0; i < 6; i++) {
+      // Step 0: 3 clicks (available → countdown → running → completed)
+      const step0 = doc.getElementById('step0');
+      step0.click(); // countdown
+      step0.click(); // running (cancels countdown)
+      step0.click(); // completed (auto-starts step 1)
+      // Steps 1–5 are auto-started; one click each to complete
+      for (let i = 1; i < 6; i++) {
         const step = doc.getElementById('step' + i);
-        step.click();
-        step.click();
+        step.click(); // complete (already running)
       }
 
       jest.advanceTimersByTime(3000);
@@ -173,7 +193,6 @@ describe('V60 Recipe — Last Brew Persistence', () => {
       expect(brewComplete.classList.contains('show')).toBe(false);
 
       // First step should be available again
-      const step0 = doc.getElementById('step0');
       expect(step0.classList.contains('available')).toBe(true);
 
       // Button should be hidden again

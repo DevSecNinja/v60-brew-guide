@@ -479,6 +479,37 @@
       color: var(--highlight-border);
     }
 
+    /* 3-second countdown before recipe starts */
+    .step.countdown {
+      border-color: var(--accent);
+      background: var(--cream);
+      cursor: pointer;
+    }
+
+    .step.countdown .step-label {
+      color: var(--accent);
+      background: rgba(141, 110, 99, 0.1);
+    }
+
+    .step.countdown .step-timer {
+      font-size: 2.2rem;
+      color: var(--accent);
+    }
+
+    .step.countdown .step-hint {
+      color: var(--light-accent);
+    }
+
+    @keyframes countdown-pop {
+      0%   { transform: scale(1.6); opacity: 0; }
+      60%  { transform: scale(0.95); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .countdown-pop {
+      animation: countdown-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
     /* Brew completion animation */
     .steps-grid.fade-out {
       animation: fadeOut 0.6s ease forwards;
@@ -2144,6 +2175,8 @@
     let stepRemaining = []; // remaining seconds (countdown)
     let wakeLock = null; // WakeLock sentinel to keep screen on during brew
     let brewCompleteTimers = []; // timers for post-brew-complete actions
+    let countdownTimer = null; // setInterval ID for the 3-2-1 pre-start countdown
+    let countdownCount = 0;    // current countdown number displayed (3, 2, or 1)
 
     // Per-step metadata: duration (seconds) and completion notification copy.
     // Durations are derived from James Hoffmann's improved V60 technique:
@@ -2223,7 +2256,7 @@
 
     // Check if brew is currently running (any step in 'running' state)
     function isBrewRunning() {
-      return stepStates.some(s => s === 'running');
+      return stepStates.some(s => s === 'running' || s === 'countdown');
     }
 
     // Re-acquire wake lock when page becomes visible again (if a recipe is selected
@@ -2417,6 +2450,13 @@
 
     // --- Brew step logic ---
     function resetBrewState() {
+      // Cancel any active pre-start countdown
+      if (countdownTimer !== null) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+        countdownCount = 0;
+      }
+
       // Clear all timers
       for (let i = 0; i < STEP_COUNT; i++) {
         if (stepTimers[i]) clearInterval(stepTimers[i]);
@@ -2453,7 +2493,9 @@
         const hintEl = document.getElementById('step' + i + 'Hint');
 
         el.className = 'step ' + stepStates[i];
-        timerEl.textContent = formatTime(Math.max(0, stepRemaining[i]));
+        timerEl.textContent = stepStates[i] === 'countdown'
+          ? String(countdownCount)
+          : formatTime(Math.max(0, stepRemaining[i]));
 
         switch (stepStates[i]) {
           case 'locked':
@@ -2461,6 +2503,9 @@
             break;
           case 'available':
             hintEl.textContent = '▶ Tap to start';
+            break;
+          case 'countdown':
+            hintEl.textContent = '▶ Tap to skip countdown';
             break;
           case 'running':
             hintEl.textContent = '⏱ Tap to skip';
@@ -2659,6 +2704,69 @@
       brewCompleteTimers = [];
     }
 
+    // --- Countdown helpers ---
+
+    function cancelCountdown() {
+      if (countdownTimer !== null) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+      }
+      for (let i = 0; i < STEP_COUNT; i++) {
+        if (stepStates[i] === 'countdown') {
+          // Remove any animation class before resetting
+          document.getElementById('step' + i + 'Timer').classList.remove('countdown-pop');
+          stepStates[i] = 'available';
+        }
+      }
+      countdownCount = 0;
+    }
+
+    function startStep(stepIndex) {
+      // Remove countdown animation class if present
+      document.getElementById('step' + stepIndex + 'Timer').classList.remove('countdown-pop');
+
+      stepStates[stepIndex] = 'running';
+      stepStartTimes[stepIndex] = Date.now();
+      const duration = stepRemaining[stepIndex];
+      stepTimers[stepIndex] = setInterval(() => {
+        const elapsed = (Date.now() - stepStartTimes[stepIndex]) / 1000;
+        stepRemaining[stepIndex] = Math.max(0, Math.ceil(duration - elapsed));
+        document.getElementById('step' + stepIndex + 'Timer').textContent = formatTime(stepRemaining[stepIndex]);
+        if (stepRemaining[stepIndex] <= 0) {
+          completeStep(stepIndex);
+        }
+      }, 200);
+      renderSteps();
+    }
+
+    function startCountdown(stepIndex) {
+      stepStates[stepIndex] = 'countdown';
+      countdownCount = 3;
+      renderSteps();
+
+      // Animate the initial number
+      const timerEl = document.getElementById('step' + stepIndex + 'Timer');
+      timerEl.classList.remove('countdown-pop');
+      timerEl.offsetWidth; // force reflow to restart animation
+      timerEl.classList.add('countdown-pop');
+
+      countdownTimer = setInterval(() => {
+        countdownCount--;
+        if (countdownCount <= 0) {
+          clearInterval(countdownTimer);
+          countdownTimer = null;
+          startStep(stepIndex);
+        } else {
+          renderSteps();
+          // Re-trigger animation for each new number
+          const el = document.getElementById('step' + stepIndex + 'Timer');
+          el.classList.remove('countdown-pop');
+          el.offsetWidth; // force reflow to restart animation
+          el.classList.add('countdown-pop');
+        }
+      }, 1000);
+    }
+
     function handleStepClick(stepIndex) {
       const state = stepStates[stepIndex];
 
@@ -2676,19 +2784,17 @@
           requestWakeLock();
         }
 
-        // Start countdown
-        stepStates[stepIndex] = 'running';
-        stepStartTimes[stepIndex] = Date.now();
-        const duration = stepRemaining[stepIndex];
-        stepTimers[stepIndex] = setInterval(() => {
-          const elapsed = (Date.now() - stepStartTimes[stepIndex]) / 1000;
-          stepRemaining[stepIndex] = Math.max(0, Math.ceil(duration - elapsed));
-          document.getElementById('step' + stepIndex + 'Timer').textContent = formatTime(stepRemaining[stepIndex]);
-          if (stepRemaining[stepIndex] <= 0) {
-            completeStep(stepIndex);
-          }
-        }, 200);
-        renderSteps();
+        if (stepIndex === 0) {
+          // Show 3-second countdown before starting the recipe
+          startCountdown(stepIndex);
+        } else {
+          // Auto-started steps begin immediately (no countdown needed)
+          startStep(stepIndex);
+        }
+      } else if (state === 'countdown') {
+        // User tapped during countdown: skip it and start immediately
+        cancelCountdown();
+        startStep(stepIndex);
       } else if (state === 'running') {
         // Manual skip / early complete
         completeStep(stepIndex);

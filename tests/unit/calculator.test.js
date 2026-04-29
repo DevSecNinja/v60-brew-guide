@@ -285,17 +285,26 @@ describe('V60 Recipe Calculator — Core Logic', () => {
       row.click();
     }
 
-    test('clicking available step starts it (changes to running)', () => {
+    test('clicking available step 0 starts a countdown', () => {
       selectAndStartBrew(250);
       const step0 = doc.getElementById('step0');
       step0.click();
+      expect(step0.classList.contains('countdown')).toBe(true);
+    });
+
+    test('tapping step 0 during countdown skips to running', () => {
+      selectAndStartBrew(250);
+      const step0 = doc.getElementById('step0');
+      step0.click(); // start countdown
+      step0.click(); // skip countdown → running
       expect(step0.classList.contains('running')).toBe(true);
     });
 
     test('clicking running step completes it (skip)', () => {
       selectAndStartBrew(250);
       const step0 = doc.getElementById('step0');
-      step0.click(); // start
+      step0.click(); // start countdown
+      step0.click(); // skip countdown → running
       step0.click(); // skip/complete
       expect(step0.classList.contains('completed')).toBe(true);
     });
@@ -303,7 +312,8 @@ describe('V60 Recipe Calculator — Core Logic', () => {
     test('completing a step auto-starts the next step', () => {
       selectAndStartBrew(250);
       const step0 = doc.getElementById('step0');
-      step0.click(); // start
+      step0.click(); // start countdown
+      step0.click(); // skip countdown → running
       step0.click(); // complete → next step auto-starts
       const step1 = doc.getElementById('step1');
       expect(step1.classList.contains('running')).toBe(true);
@@ -319,18 +329,24 @@ describe('V60 Recipe Calculator — Core Logic', () => {
     test('clicking a completed step does nothing', () => {
       selectAndStartBrew(250);
       const step0 = doc.getElementById('step0');
-      step0.click(); // start
+      step0.click(); // start countdown
+      step0.click(); // skip countdown → running
       step0.click(); // complete
-      step0.click(); // click again
+      step0.click(); // click again on completed step
       expect(step0.classList.contains('completed')).toBe(true);
     });
 
     test('completing all steps shows brew complete message', () => {
       selectAndStartBrew(250);
-      for (let i = 0; i < 6; i++) {
+      // Step 0: needs 3 clicks (available → countdown → running → completed)
+      const step0 = doc.getElementById('step0');
+      step0.click(); // countdown
+      step0.click(); // running
+      step0.click(); // completed (auto-starts step 1)
+      // Steps 1-5 are auto-started; one click each completes them
+      for (let i = 1; i < 6; i++) {
         const step = doc.getElementById('step' + i);
-        step.click(); // start
-        step.click(); // complete
+        step.click(); // complete (already running)
       }
       const brewComplete = doc.getElementById('brewComplete');
       expect(brewComplete.classList.contains('show')).toBe(true);
@@ -339,8 +355,8 @@ describe('V60 Recipe Calculator — Core Logic', () => {
     test('reset button resets all brew steps', () => {
       selectAndStartBrew(250);
       const step0 = doc.getElementById('step0');
-      step0.click(); // start
-      step0.click(); // complete
+      step0.click(); // start countdown
+      step0.click(); // skip countdown → running
 
       const btnReset = doc.getElementById('btnResetBrew');
       btnReset.click();
@@ -504,7 +520,8 @@ describe('V60 Recipe Calculator — Audio Completion Sound', () => {
       selectAndStartBrew(250);
       const step0 = doc.getElementById('step0');
 
-      step0.click(); // start
+      step0.click(); // start countdown
+      step0.click(); // skip countdown → running
       step0.click(); // skip (manual complete)
 
       expect(soundCalled).toBe(true);
@@ -525,10 +542,15 @@ describe('V60 Recipe Calculator — Audio Completion Sound', () => {
       selectAndStartBrew(250);
 
       // Complete all 6 steps
-      for (let i = 0; i < 6; i++) {
+      // Step 0 needs 3 clicks: available → countdown → running → completed
+      const step0 = doc.getElementById('step0');
+      step0.click(); // countdown
+      step0.click(); // running
+      step0.click(); // completed (auto-starts step 1)
+      // Steps 1–5 are auto-started; one click each to complete
+      for (let i = 1; i < 6; i++) {
         const step = doc.getElementById('step' + i);
-        step.click(); // start
-        step.click(); // complete
+        step.click(); // complete (already running)
       }
 
       expect(callCount).toBe(6);
