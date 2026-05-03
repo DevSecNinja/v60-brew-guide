@@ -1256,7 +1256,7 @@
     .favorite-description-input {
       width: 100%;
       font-family: 'Inter', sans-serif;
-      font-size: 0.8rem;
+      font-size: 16px;
       padding: 0.35rem 0.5rem;
       border: 1px solid var(--cream);
       border-radius: 4px;
@@ -2103,7 +2103,11 @@
 
       descDiv.innerHTML = '';
       descDiv.appendChild(input);
-      input.focus();
+      try {
+        input.focus({ preventScroll: true });
+      } catch (e) {
+        input.focus();
+      }
 
       function finishEdit() {
         const newDescription = input.value.trim();
