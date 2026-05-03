@@ -2259,14 +2259,14 @@
       return stepStates.some(s => s === 'running' || s === 'countdown');
     }
 
-    // Re-acquire wake lock when page becomes visible again (if a recipe is selected
-    // and the brew hasn't completed yet). This covers both the case where a step is
-    // actively running and the case where a recipe is preselected but brewing hasn't
-    // started — e.g. after the user switches apps and returns to the guide.
+    function isBrewComplete() {
+      return selectedRecipe !== null && stepStates.length > 0 && stepStates.every(s => s === 'completed');
+    }
+
+    // Re-acquire wake lock when the app becomes visible again, unless the brew is done.
     document.addEventListener('visibilitychange', async () => {
       if (document.visibilityState === 'visible' &&
-          selectedRecipe !== null &&
-          !stepStates.every(s => s === 'completed') &&
+          !isBrewComplete() &&
           wakeLock === null) {
         await requestWakeLock();
       }
@@ -2432,13 +2432,7 @@
       document.getElementById('step5Detail').innerHTML = `Gently swirl &amp; drain<br>Target <strong>~3:00</strong>`;
 
       // Reset brew state
-      resetBrewState();
-
-      // Keep the screen on as soon as a brew is selected, so users don't lose
-      // their place between tapping a recipe and starting the first pour.
-      // Requested after resetBrewState() because that helper releases any
-      // previously-held wake lock from an earlier selection.
-      requestWakeLock();
+      resetBrewState({ releaseLock: false });
 
       // Show the share button now that a recipe is selected, and sync URL
       if (btnShareRecipe) btnShareRecipe.hidden = false;
@@ -2449,7 +2443,7 @@
     }
 
     // --- Brew step logic ---
-    function resetBrewState() {
+    function resetBrewState({ releaseLock = true } = {}) {
       // Cancel any active pre-start countdown
       if (countdownTimer !== null) {
         clearInterval(countdownTimer);
@@ -2469,8 +2463,9 @@
       // Clear any pending brew-complete timers
       clearBrewCompleteTimers();
 
-      // Release wake lock when brew is reset
-      releaseWakeLock();
+      if (releaseLock) {
+        releaseWakeLock();
+      }
 
       // First step is available
       if (selectedRecipe) {
@@ -2776,14 +2771,6 @@
           requestNotificationPermission();
         }
 
-        // Re-request wake lock when the first step starts. The lock is normally
-        // acquired on recipe selection, but may have been released if the page was
-        // briefly hidden before the user tapped to start brewing (e.g. preselected
-        // brew via URL / last-brew restore). This is a no-op if the lock is already held.
-        if (stepIndex === 0) {
-          requestWakeLock();
-        }
-
         if (stepIndex === 0) {
           // Show 3-second countdown before starting the recipe
           startCountdown(stepIndex);
@@ -2818,7 +2805,6 @@
     document.getElementById('btnBrewAgain').addEventListener('click', () => {
       if (selectedRecipe) {
         resetBrewState();
-        requestWakeLock();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     });
@@ -2883,6 +2869,8 @@
         selectRecipeByWater(lastBrew.recipe.water);
       }
     }
+
+    requestWakeLock();
 
     // --- GitHub Star Count ---
     // Note: Functions are kept in global scope for testing purposes
