@@ -258,6 +258,17 @@ describe('V60 Recipe Calculator — Favorites Feature', () => {
       expect(descText.textContent).toBe('Perfect for my glass');
     });
 
+    test('editing a new favorite note places the input under the recipe details', () => {
+      window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
+      doc.querySelector('.btn-edit-favorite').click();
+
+      const card = doc.querySelector('.favorite-card');
+      const content = card.querySelector('.favorite-card-content');
+      const descArea = card.querySelector('.favorite-card-description');
+      expect(descArea).not.toBeNull();
+      expect(descArea.parentElement).toBe(content);
+    });
+
     test('editing a favorite note focuses without scrolling the page', () => {
       const focusSpy = jest.spyOn(window.HTMLInputElement.prototype, 'focus').mockImplementation(() => {});
 
