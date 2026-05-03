@@ -2091,7 +2091,7 @@
       if (!descDiv) {
         descDiv = document.createElement('div');
         descDiv.className = 'favorite-card-description';
-        card.appendChild(descDiv);
+        card.querySelector('.favorite-card-content').appendChild(descDiv);
       }
 
       const input = document.createElement('input');
