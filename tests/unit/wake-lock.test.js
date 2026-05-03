@@ -41,6 +41,10 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
     test('isBrewRunning function is defined', () => {
       expect(typeof window.isBrewRunning).toBe('function');
     });
+
+    test('isBrewComplete function is defined', () => {
+      expect(typeof window.isBrewComplete).toBe('function');
+    });
   });
 
   describe('Wake Lock API fallback handling', () => {
@@ -130,6 +134,42 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
     });
   });
 
+  describe('isBrewComplete state detection', () => {
+    function selectRow(waterAmount) {
+      const rows = doc.querySelectorAll('#recipeTableBody tr');
+      const row = Array.from(rows).find(r => r.dataset.water === String(waterAmount));
+      row.click();
+      return row;
+    }
+
+    function completeBrew() {
+      const step0 = doc.getElementById('step0');
+      step0.click(); // countdown
+      step0.click(); // running
+      step0.click(); // completed (auto-starts step 1)
+      const stepCount = doc.querySelectorAll('#stepsGrid .step').length;
+      for (let i = 1; i < stepCount; i++) {
+        const step = doc.getElementById('step' + i);
+        step.click(); // complete (already running)
+      }
+    }
+
+    test('returns false when no recipe is selected', () => {
+      expect(window.isBrewComplete()).toBe(false);
+    });
+
+    test('returns false when recipe selected but no step started', () => {
+      selectRow(250);
+      expect(window.isBrewComplete()).toBe(false);
+    });
+
+    test('returns true when all steps are completed', () => {
+      selectRow(250);
+      completeBrew();
+      expect(window.isBrewComplete()).toBe(true);
+    });
+  });
+
   describe('Wake Lock integration with brew steps', () => {
     function selectRow(waterAmount) {
       const rows = doc.querySelectorAll('#recipeTableBody tr');
@@ -175,15 +215,15 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
 
     test('requestWakeLock is NOT called when a recipe is selected', () => {
       const originalRequestWakeLock = window.requestWakeLock;
-      let wakeLockCalled = 0;
+      let wakeLockCallCount = 0;
       window.requestWakeLock = () => {
-        wakeLockCalled++;
+        wakeLockCallCount++;
         return Promise.resolve(false);
       };
 
       selectRow(250);
 
-      expect(wakeLockCalled).toBe(0);
+      expect(wakeLockCallCount).toBe(0);
 
       // Restore
       window.requestWakeLock = originalRequestWakeLock;
