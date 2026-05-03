@@ -2260,7 +2260,7 @@
     }
 
     function isBrewComplete() {
-      return selectedRecipe !== null && stepStates.length > 0 && stepStates.every(s => s === 'completed');
+      return selectedRecipe !== null && stepStates.length === STEP_COUNT && stepStates.every(s => s === 'completed');
     }
 
     // Re-acquire wake lock when the app becomes visible again, unless the brew is done.

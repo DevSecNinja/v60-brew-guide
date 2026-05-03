@@ -149,7 +149,7 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
       step0.click(); // completed (auto-starts step 1)
       const stepCount = doc.querySelectorAll('#stepsGrid .step').length;
       for (let i = 1; i < stepCount; i++) {
-        const step = doc.getElementById('step' + i);
+        const step = doc.getElementById(`step${i}`);
         step.click(); // complete (already running)
       }
     }
@@ -350,7 +350,8 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
         releaseCalled = true;
         return Promise.resolve();
       };
-      window.setTimeout = (callback) => {
+      window.setTimeout = (callback, delay) => {
+        void delay;
         callback();
         return 0;
       };
