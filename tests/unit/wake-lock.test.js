@@ -186,29 +186,28 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
       // Steps 1–5 are auto-started; one click each to complete
       const stepCount = doc.querySelectorAll('#stepsGrid .step').length;
       for (let i = 1; i < stepCount; i++) {
-        const step = doc.getElementById('step' + i);
+        const step = doc.getElementById(`step${i}`);
         step.click(); // complete (already running)
       }
     }
 
     test('wake lock is requested when the app opens', async () => {
-      const request = jest.fn(() => Promise.resolve({
+      const mockWakeLockRequest = jest.fn(() => Promise.resolve({
         addEventListener: jest.fn(),
         release: jest.fn(),
       }));
       const domWithWakeLock = createDOM({
         beforeParse(win) {
           Object.defineProperty(win.navigator, 'wakeLock', {
-            value: { request },
+            value: { request: mockWakeLockRequest },
             configurable: true,
           });
         },
       });
 
-      await Promise.resolve();
-      await Promise.resolve();
+      await new Promise(resolve => setTimeout(resolve, 0));
 
-      expect(request).toHaveBeenCalledWith('screen');
+      expect(mockWakeLockRequest).toHaveBeenCalledWith('screen');
 
       domWithWakeLock.window.close();
     });
