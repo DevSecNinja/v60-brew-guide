@@ -349,7 +349,7 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
         releaseCalled = true;
         return Promise.resolve();
       };
-      window.setTimeout = (callback, _delay) => {
+      window.setTimeout = (callback) => {
         callback();
         return 0;
       };
