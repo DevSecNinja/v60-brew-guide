@@ -257,6 +257,27 @@ describe('V60 Recipe Calculator — Favorites Feature', () => {
       const descText = doc.querySelector('.favorite-description-text');
       expect(descText.textContent).toBe('Perfect for my glass');
     });
+
+    test('editing a favorite note focuses without scrolling the page', () => {
+      const focusSpy = jest.spyOn(window.HTMLInputElement.prototype, 'focus').mockImplementation(() => {});
+
+      try {
+        window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
+        doc.querySelector('.btn-edit-favorite').click();
+
+        expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true });
+      } finally {
+        focusSpy.mockRestore();
+      }
+    });
+
+    test('favorite note input uses iOS-safe text size', () => {
+      window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
+      doc.querySelector('.btn-edit-favorite').click();
+
+      const input = doc.querySelector('.favorite-description-input');
+      expect(window.getComputedStyle(input).fontSize).toBe('16px');
+    });
   });
 
   describe('Table favorite button integration', () => {
