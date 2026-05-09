@@ -2198,16 +2198,89 @@
     // --- Wake Lock API ---
     // Pending promise to serialize wake lock requests
     let wakeLockPending = null;
+    let mediaWakeLock = null;
+    const MEDIA_WAKE_LOCK_COLOR_DARK = '#000000';
+    const MEDIA_WAKE_LOCK_COLOR_LIGHTER = '#010101';
+    // Refresh every 30s: frequent enough for iOS to keep hidden media active, but low battery cost.
+    const MEDIA_WAKE_LOCK_REFRESH_INTERVAL_MS = 30000;
 
-    // Request wake lock to keep screen on during brewing
-    async function requestWakeLock() {
-      if (!('wakeLock' in navigator)) {
+    async function requestMediaWakeLock() {
+      if (mediaWakeLock !== null) {
+        return true;
+      }
+
+      const canvas = document.createElement('canvas');
+      if (typeof canvas.captureStream !== 'function') {
         return false;
       }
 
+      canvas.width = 1;
+      canvas.height = 1;
+      const context = canvas.getContext('2d');
+      let drawToggle = false;
+      const drawFrame = () => {
+        if (context) {
+          drawToggle = !drawToggle;
+          context.fillStyle = drawToggle ? MEDIA_WAKE_LOCK_COLOR_DARK : MEDIA_WAKE_LOCK_COLOR_LIGHTER;
+          context.fillRect(0, 0, 1, 1);
+        }
+      };
+      drawFrame();
+
+      const stream = canvas.captureStream(1);
+      const video = document.createElement('video');
+      video.muted = true;
+      video.loop = true;
+      video.playsInline = true;
+      video.setAttribute('aria-hidden', 'true');
+      video.srcObject = stream;
+      Object.assign(video.style, {
+        position: 'fixed',
+        width: '1px',
+        height: '1px',
+        opacity: '0',
+        pointerEvents: 'none',
+      });
+
+      const drawTimer = setInterval(drawFrame, MEDIA_WAKE_LOCK_REFRESH_INTERVAL_MS);
+      mediaWakeLock = { video, stream, drawTimer };
+      document.body.appendChild(video);
+
+      try {
+        await video.play();
+        return true;
+      } catch (error) {
+        releaseMediaWakeLock();
+        return false;
+      }
+    }
+
+    function releaseMediaWakeLock() {
+      const currentMediaWakeLock = mediaWakeLock;
+      if (currentMediaWakeLock === null) {
+        return;
+      }
+
+      mediaWakeLock = null;
+      clearInterval(currentMediaWakeLock.drawTimer);
+      try {
+        currentMediaWakeLock.video.pause();
+      } catch (error) {
+        // Silently handle pause errors
+      }
+      currentMediaWakeLock.stream.getTracks().forEach(track => track.stop());
+      currentMediaWakeLock.video.remove();
+    }
+
+    // Request wake lock to keep screen on during brewing
+    async function requestWakeLock() {
       // If a wake lock is already held, do not request another one
       if (wakeLock !== null) {
         return true;
+      }
+
+      if (!('wakeLock' in navigator)) {
+        return requestMediaWakeLock();
       }
 
       // If a request is already in flight, wait for it and return the result
@@ -2220,6 +2293,7 @@
         try {
           const currentWakeLock = await navigator.wakeLock.request('screen');
           wakeLock = currentWakeLock;
+          releaseMediaWakeLock();
           
           // Listen for wake lock release (e.g., tab becomes hidden)
           currentWakeLock.addEventListener('release', () => {
@@ -2231,7 +2305,7 @@
           
           return true;
         } catch (error) {
-          return false;
+          return requestMediaWakeLock();
         } finally {
           // Clear pending only if this is still the active pending request
           if (wakeLockPending === pendingRequest) {
@@ -2256,6 +2330,7 @@
           // Silently handle release errors
         }
       }
+      releaseMediaWakeLock();
     }
 
     // Check if brew is currently running (any step in 'running' state)
@@ -2269,10 +2344,11 @@
         stepStates.every(s => s === 'completed');
     }
 
-    // Re-acquire wake lock when the app becomes visible again, unless the brew is done.
+    // Re-acquire only during active brews; selected-but-not-started recipes are idle, and off-gesture
+    // idle visibility events can block the next user-tap request on iOS.
     document.addEventListener('visibilitychange', async () => {
       if (document.visibilityState === 'visible' &&
-          !isBrewComplete() &&
+          isBrewRunning() &&
           wakeLock === null) {
         await requestWakeLock();
       }
@@ -2471,6 +2547,7 @@
 
       if (releaseLock) {
         releaseWakeLock();
+        requestWakeLock();
       }
 
       // First step is available
@@ -2772,6 +2849,10 @@
       const state = stepStates[stepIndex];
 
       if (state === 'available') {
+        if (stepIndex === 0) {
+          requestWakeLock();
+        }
+
         // Request notification permission on first interaction (best practice for iOS)
         if (stepIndex === 0 && notificationPermission === 'default') {
           requestNotificationPermission();
@@ -2875,8 +2956,6 @@
         selectRecipeByWater(lastBrew.recipe.water);
       }
     }
-
-    requestWakeLock();
 
     // --- GitHub Star Count ---
     // Note: Functions are kept in global scope for testing purposes

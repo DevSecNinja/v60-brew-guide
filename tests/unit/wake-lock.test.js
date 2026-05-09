@@ -48,10 +48,103 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
   });
 
   describe('Wake Lock API fallback handling', () => {
+    let originalCaptureStream;
+    let originalGetContext;
+    let originalPlay;
+    let originalPause;
+
+    beforeEach(() => {
+      originalCaptureStream = window.HTMLCanvasElement.prototype.captureStream;
+      originalGetContext = window.HTMLCanvasElement.prototype.getContext;
+      originalPlay = window.HTMLMediaElement.prototype.play;
+      originalPause = window.HTMLMediaElement.prototype.pause;
+    });
+
+    afterEach(() => {
+      window.HTMLCanvasElement.prototype.captureStream = originalCaptureStream;
+      window.HTMLCanvasElement.prototype.getContext = originalGetContext;
+      window.HTMLMediaElement.prototype.play = originalPlay;
+      window.HTMLMediaElement.prototype.pause = originalPause;
+    });
+
     test('requestWakeLock handles missing Wake Lock API gracefully', async () => {
       // jsdom doesn't support navigator.wakeLock, so this tests the fallback
       const result = await window.requestWakeLock();
       expect(result).toBe(false);
+    });
+
+    function mockMediaWakeLockSupport() {
+      const stop = jest.fn();
+      const stream = { getTracks: jest.fn(() => [{ stop }]) };
+      let fillStyleValue = '#000000';
+      const fillContext = {
+        get fillStyle() {
+          return fillStyleValue;
+        },
+        set fillStyle(value) {
+          fillStyleValue = value;
+        },
+        fillRect: jest.fn(),
+      };
+      window.HTMLCanvasElement.prototype.captureStream = jest.fn(() => stream);
+      window.HTMLCanvasElement.prototype.getContext = jest.fn(() => fillContext);
+      window.HTMLMediaElement.prototype.play = jest.fn(() => Promise.resolve());
+      window.HTMLMediaElement.prototype.pause = jest.fn();
+      return { stop, stream };
+    }
+
+    test('requestWakeLock starts media fallback when Wake Lock API is missing', async () => {
+      const { stop } = mockMediaWakeLockSupport();
+
+      const result = await window.requestWakeLock();
+
+      expect(result).toBe(true);
+      expect(window.HTMLMediaElement.prototype.play).toHaveBeenCalled();
+      expect(doc.querySelector('video[aria-hidden="true"]')).not.toBeNull();
+
+      await window.releaseWakeLock();
+
+      expect(window.HTMLMediaElement.prototype.pause).toHaveBeenCalled();
+      expect(stop).toHaveBeenCalled();
+      expect(doc.querySelector('video[aria-hidden="true"]')).toBeNull();
+    });
+
+    test('requestWakeLock starts media fallback when native Wake Lock request fails', async () => {
+      Object.defineProperty(window.navigator, 'wakeLock', {
+        value: { request: jest.fn(() => Promise.reject(new Error('NotAllowedError'))) },
+        configurable: true,
+      });
+      mockMediaWakeLockSupport();
+
+      const result = await window.requestWakeLock();
+
+      expect(result).toBe(true);
+      expect(window.navigator.wakeLock.request).toHaveBeenCalledWith('screen');
+      expect(window.HTMLMediaElement.prototype.play).toHaveBeenCalled();
+      expect(doc.querySelector('video[aria-hidden="true"]')).not.toBeNull();
+
+      await window.releaseWakeLock();
+    });
+
+    test('requestWakeLock upgrades media fallback to native Wake Lock when available', async () => {
+      mockMediaWakeLockSupport();
+      await window.requestWakeLock();
+
+      const mockWakeLockRequest = jest.fn(() => Promise.resolve({
+        addEventListener: jest.fn(),
+        release: jest.fn(),
+      }));
+      Object.defineProperty(window.navigator, 'wakeLock', {
+        value: { request: mockWakeLockRequest },
+        configurable: true,
+      });
+
+      const result = await window.requestWakeLock();
+
+      expect(result).toBe(true);
+      expect(mockWakeLockRequest).toHaveBeenCalledWith('screen');
+      expect(window.HTMLMediaElement.prototype.pause).toHaveBeenCalled();
+      expect(doc.querySelector('video[aria-hidden="true"]')).toBeNull();
     });
 
     test('releaseWakeLock handles null wakeLock gracefully', async () => {
@@ -191,7 +284,7 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
       }
     }
 
-    test('wake lock is requested when the app opens', async () => {
+    test('wake lock is not requested when the app opens before brewing starts', async () => {
       const mockWakeLockRequest = jest.fn(() => Promise.resolve({
         addEventListener: jest.fn(),
         release: jest.fn(),
@@ -207,7 +300,7 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
 
       await new Promise(resolve => setTimeout(resolve, 0));
 
-      expect(mockWakeLockRequest).toHaveBeenCalledWith('screen');
+      expect(mockWakeLockRequest).not.toHaveBeenCalled();
 
       domWithWakeLock.window.close();
     });
@@ -244,7 +337,7 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
       window.releaseWakeLock = originalReleaseWakeLock;
     });
 
-    test('requestWakeLock is NOT called when step 0 starts', () => {
+    test('requestWakeLock is called when step 0 starts (user gesture keeps iOS screen on)', () => {
       const originalRequestWakeLock = window.requestWakeLock;
       let wakeLockCallCount = 0;
 
@@ -257,7 +350,7 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
       const step0 = doc.getElementById('step0');
       step0.click(); // start step 0
 
-      expect(wakeLockCallCount).toBe(0);
+      expect(wakeLockCallCount).toBe(1);
 
       // Restore
       window.requestWakeLock = originalRequestWakeLock;
@@ -287,9 +380,13 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
       window.requestWakeLock = originalRequestWakeLock;
     });
 
-    test('requestWakeLock is re-acquired on visibility change before brew completes', () => {
+    test('requestWakeLock is re-acquired on visibility change during an active brew', () => {
       const originalRequestWakeLock = window.requestWakeLock;
       let wakeLockCallCount = 0;
+
+      selectRow(250);
+      const step0 = doc.getElementById('step0');
+      step0.click(); // start step 0
 
       window.requestWakeLock = () => {
         wakeLockCallCount++;
@@ -305,7 +402,7 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
       });
       doc.dispatchEvent(new window.Event('visibilitychange'));
 
-      // The handler should re-request the lock because the brew is not done.
+      // The handler should re-request the lock because the brew is active.
       expect(wakeLockCallCount).toBe(1);
 
       // Restore
@@ -387,7 +484,7 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
       window.releaseWakeLock = originalReleaseWakeLock;
     });
 
-    test('requestWakeLock is NOT called when brewing another one', () => {
+    test('requestWakeLock IS called when brewing another one (re-acquires to keep screen on)', () => {
       const originalRequestWakeLock = window.requestWakeLock;
       let wakeLockCallCount = 0;
 
@@ -402,7 +499,29 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
       const btnBrewAgain = doc.getElementById('btnBrewAgain');
       btnBrewAgain.click();
 
-      expect(wakeLockCallCount).toBe(0);
+      expect(wakeLockCallCount).toBe(1);
+
+      // Restore
+      window.requestWakeLock = originalRequestWakeLock;
+    });
+
+    test('requestWakeLock IS called when brew is reset mid-brew (re-acquires to keep screen on)', () => {
+      const originalRequestWakeLock = window.requestWakeLock;
+      let wakeLockCallCount = 0;
+
+      selectRow(250);
+      const step0 = doc.getElementById('step0');
+      step0.click(); // start step
+
+      window.requestWakeLock = () => {
+        wakeLockCallCount++;
+        return Promise.resolve(false);
+      };
+
+      const btnReset = doc.getElementById('btnResetBrew');
+      btnReset.click();
+
+      expect(wakeLockCallCount).toBe(1);
 
       // Restore
       window.requestWakeLock = originalRequestWakeLock;
