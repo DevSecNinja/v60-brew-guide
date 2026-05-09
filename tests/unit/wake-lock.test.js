@@ -387,7 +387,7 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
       window.releaseWakeLock = originalReleaseWakeLock;
     });
 
-    test('requestWakeLock is NOT called when brewing another one', () => {
+    test('requestWakeLock IS called when brewing another one (re-acquires to keep screen on)', () => {
       const originalRequestWakeLock = window.requestWakeLock;
       let wakeLockCallCount = 0;
 
@@ -402,7 +402,29 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
       const btnBrewAgain = doc.getElementById('btnBrewAgain');
       btnBrewAgain.click();
 
-      expect(wakeLockCallCount).toBe(0);
+      expect(wakeLockCallCount).toBe(1);
+
+      // Restore
+      window.requestWakeLock = originalRequestWakeLock;
+    });
+
+    test('requestWakeLock IS called when brew is reset mid-brew (re-acquires to keep screen on)', () => {
+      const originalRequestWakeLock = window.requestWakeLock;
+      let wakeLockCallCount = 0;
+
+      selectRow(250);
+      const step0 = doc.getElementById('step0');
+      step0.click(); // start step
+
+      window.requestWakeLock = () => {
+        wakeLockCallCount++;
+        return Promise.resolve(false);
+      };
+
+      const btnReset = doc.getElementById('btnResetBrew');
+      btnReset.click();
+
+      expect(wakeLockCallCount).toBe(1);
 
       // Restore
       window.requestWakeLock = originalRequestWakeLock;
