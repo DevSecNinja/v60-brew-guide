@@ -126,6 +126,27 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
       await window.releaseWakeLock();
     });
 
+    test('requestWakeLock upgrades media fallback to native Wake Lock when available', async () => {
+      mockMediaWakeLockSupport();
+      await window.requestWakeLock();
+
+      const mockWakeLockRequest = jest.fn(() => Promise.resolve({
+        addEventListener: jest.fn(),
+        release: jest.fn(),
+      }));
+      Object.defineProperty(window.navigator, 'wakeLock', {
+        value: { request: mockWakeLockRequest },
+        configurable: true,
+      });
+
+      const result = await window.requestWakeLock();
+
+      expect(result).toBe(true);
+      expect(mockWakeLockRequest).toHaveBeenCalledWith('screen');
+      expect(window.HTMLMediaElement.prototype.pause).toHaveBeenCalled();
+      expect(doc.querySelector('video[aria-hidden="true"]')).toBeNull();
+    });
+
     test('releaseWakeLock handles null wakeLock gracefully', async () => {
       // Should not throw when wakeLock is null
       await expect(window.releaseWakeLock()).resolves.toBeUndefined();

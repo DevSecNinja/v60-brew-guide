@@ -2275,7 +2275,7 @@
     // Request wake lock to keep screen on during brewing
     async function requestWakeLock() {
       // If a wake lock is already held, do not request another one
-      if (wakeLock !== null || mediaWakeLock !== null) {
+      if (wakeLock !== null) {
         return true;
       }
 
@@ -2344,7 +2344,8 @@
         stepStates.every(s => s === 'completed');
     }
 
-    // Re-acquire only during active brews so off-gesture idle visibility events do not block the next user-tap request.
+    // Re-acquire only during active brews; selected-but-not-started recipes are idle, and off-gesture
+    // idle visibility events can block the next user-tap request on iOS.
     document.addEventListener('visibilitychange', async () => {
       if (document.visibilityState === 'visible' &&
           isBrewRunning() &&
