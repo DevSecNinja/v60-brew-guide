@@ -20,6 +20,16 @@ A simple, static V60 pour-over coffee brew guide based on [James Hoffmann's Ulti
 - Hosted via GitHub Pages with automated deployment
 - No frameworks, no build tools, no npm — deploy and forget
 
+## Gotchas
+
+- **iOS PWA wake lock requires a user gesture.** The Screen Wake Lock API
+  cannot be granted on iOS / iPadOS standalone PWAs without an explicit user
+  interaction (tap, scroll, keypress). The app therefore acquires the lock
+  on the first gesture rather than on app open, and re-acquires it on the
+  next gesture after returning from the background. In practice the screen
+  stays on from your very first interaction, but a freshly-launched app
+  sitting idle on the table will still dim and lock as usual.
+
 ## Credits
 
 - Recipe by **James Hoffmann** — [The Ultimate V60 Technique](https://www.youtube.com/watch?v=1oB1oDrDkHM)
