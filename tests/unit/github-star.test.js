@@ -40,6 +40,15 @@ describe('GitHub Star Feature', () => {
       expect(commitSha.closest('footer')).not.toBeNull();
     });
 
+    test('commit SHA is a clickable link to GitHub', () => {
+      const commitShaLink = doc.getElementById('commitShaLink');
+      expect(commitShaLink).not.toBeNull();
+      expect(commitShaLink.tagName).toBe('A');
+      expect(commitShaLink.href).toContain('github.com/DevSecNinja/v60-brew-guide');
+      expect(commitShaLink.target).toBe('_blank');
+      expect(commitShaLink.rel).toBe('noopener');
+    });
+
     test('GitHub star button exists and links to repository', () => {
       const githubStarButton = doc.getElementById('githubStarButton');
       expect(githubStarButton).not.toBeNull();

@@ -81,14 +81,15 @@ jobs:
           grep "const CACHE_NAME" sw.js
 
       - name: Auto-update footer commit SHA
-        # Replace the placeholder "dev" text in the commit SHA span with the
-        # short commit SHA so users can identify the deployed version.
+        # Replace the placeholder "dev" text and link with the actual short
+        # commit SHA and a direct link to that commit on GitHub.
         run: |
           set -euo pipefail
           SHORT_SHA="${GITHUB_SHA::7}"
           echo "Setting footer commit SHA to ${SHORT_SHA}"
-          sed -i -E 's|(<span class="commit-sha" id="commitSha">)dev(</span>)|\1'"${SHORT_SHA}"'\2|' index.html
-          grep 'id="commitSha"' index.html
+          sed -i "s|github.com/DevSecNinja/v60-brew-guide/commits\"|github.com/DevSecNinja/v60-brew-guide/commit/${GITHUB_SHA}\"|" index.html
+          sed -i -E 's|(id="commitShaLink">)dev(</a>)|\1'"${SHORT_SHA}"'\2|' index.html
+          grep 'id="commitShaLink"' index.html
 
       - name: Auto-update sitemap lastmod date
         # Replace the hard-coded lastmod date in sitemap.xml with today's date

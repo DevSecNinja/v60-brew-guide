@@ -57,8 +57,9 @@ jobs:
           set -euo pipefail
           SHORT_SHA="${GITHUB_SHA::7}"
           echo "Setting footer commit SHA to ${SHORT_SHA}"
-          sed -i -E 's|(<span class="commit-sha" id="commitSha">)dev(</span>)|\1'"${SHORT_SHA}"'\2|' index.html
-          grep 'id="commitSha"' index.html
+          sed -i "s|github.com/DevSecNinja/v60-brew-guide/commits\"|github.com/DevSecNinja/v60-brew-guide/commit/${GITHUB_SHA}\"|" index.html
+          sed -i -E 's|(id="commitShaLink">)dev(</a>)|\1'"${SHORT_SHA}"'\2|' index.html
+          grep 'id="commitShaLink"' index.html
 
       - name: Ensure Cloudflare Pages project exists
         uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
