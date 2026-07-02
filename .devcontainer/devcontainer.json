@@ -1,14 +1,11 @@
 {
   "name": "V60 Recipe",
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:24@sha256:21f15d367bfc5ceadabb9989be48029cba1e6bd80da323405232614a267a9c45",
+  "image": "ghcr.io/devsecninja/dotfiles-devcontainer:v0.6.0@sha256:238aec66927da1d67f7f7225123c1d207f7c01c93d451fab7189c94d53453940",
   "postCreateCommand": "",
   "customizations": {
     "vscode": {
       "extensions": [
-        "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode",
-        "GitHub.copilot",
-        "Orta.vscode-jest"
+        "GitHub.vscode-pull-request-github"
       ]
     }
   }
