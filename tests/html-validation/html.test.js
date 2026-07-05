@@ -228,6 +228,17 @@ describe('CSS and Styling', () => {
     expect(fontLinks.length).toBeGreaterThan(0);
   });
 
+  test('footer uses an elevated gradient style', () => {
+    const style = doc.querySelector('style');
+    expect(style.textContent).toMatch(/footer\s*\{[\s\S]*?background:\s*linear-gradient/);
+    expect(style.textContent).toMatch(/footer\s*\{[\s\S]*?border-radius:\s*16px 16px 0 0/);
+  });
+
+  test('footer includes decorative pseudo-element content', () => {
+    const style = doc.querySelector('style');
+    expect(style.textContent).toMatch(/footer::before[\s\S]*?content:\s*'☕ ✦ ☕'/);
+  });
+
   test('has font preconnect hints', () => {
     const preconnect = doc.querySelectorAll('link[rel="preconnect"]');
     expect(preconnect.length).toBeGreaterThan(0);

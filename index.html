@@ -1210,11 +1210,28 @@
 
     /* Footer */
     footer {
+      position: relative;
       text-align: center;
-      padding: 1.5rem 1rem;
+      margin: 2rem auto 0;
+      padding: 1.6rem 1rem 1.4rem;
       font-size: 0.8rem;
       color: var(--light-accent);
-      border-top: 1px solid var(--cream);
+      border: 1px solid var(--cream);
+      border-bottom: none;
+      border-radius: 16px 16px 0 0;
+      background: linear-gradient(180deg, var(--white) 0%, var(--cream-light) 100%);
+      box-shadow: 0 -8px 24px rgba(90, 51, 42, 0.08);
+      overflow: hidden;
+    }
+
+    footer::before {
+      content: '☕ ✦ ☕';
+      display: block;
+      margin-bottom: 0.55rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.2rem;
+      color: var(--accent);
+      opacity: 0.75;
     }
 
     footer a {
