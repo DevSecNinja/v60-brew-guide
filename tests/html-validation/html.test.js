@@ -153,6 +153,15 @@ describe('HTML Structure', () => {
     expect(texts[5]).toContain('Finish');
   });
 
+  test('temperature estimator is a collapsed card after the intro', () => {
+    const intro = doc.getElementById('brewIntro');
+    const estimator = doc.getElementById('temperatureEstimator');
+
+    expect(intro.nextElementSibling).toBe(estimator);
+    expect(estimator.tagName).toBe('DETAILS');
+    expect(estimator.hasAttribute('open')).toBe(false);
+  });
+
   test('has ratio slider with correct attributes', () => {
     const slider = doc.querySelector('#ratioSlider');
     expect(slider).not.toBeNull();

@@ -770,17 +770,15 @@
     }
 
     /* Temperature Estimator */
-    .temperature-section {
-      background: var(--white);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 1.25rem 1.5rem;
-      margin-bottom: 1.5rem;
-      border: 1px solid rgba(141, 110, 99, 0.1);
+    .temperature-estimator-card {
       border-top: 3px solid var(--accent);
     }
 
-    .temperature-section h2 {
+    .temperature-estimator-card .temperature-body {
+      padding: 0 1.25rem 1.1rem;
+    }
+
+    .temperature-estimator-card h2 {
       font-size: 1.15rem;
       font-weight: 700;
       margin-bottom: 0.35rem;
@@ -797,6 +795,32 @@
 
     .temperature-note {
       margin-top: 0.75rem;
+    }
+
+    .temperature-guidance {
+      margin-top: 0.9rem;
+      padding: 0.85rem 1rem;
+      border-radius: 10px;
+      background: rgba(188, 170, 164, 0.14);
+    }
+
+    .temperature-guidance-title {
+      display: block;
+      margin-bottom: 0.45rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--espresso);
+    }
+
+    .temperature-guidance ul {
+      margin: 0 0 0.5rem 1rem;
+      padding: 0;
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+    }
+
+    .temperature-guidance li + li {
+      margin-top: 0.25rem;
     }
 
     .temperature-controls {
@@ -855,6 +879,55 @@
       font-size: 0.78rem;
       color: var(--text-secondary);
       font-variant-numeric: tabular-nums;
+    }
+
+    .brew-prep-step {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 0.75rem;
+      padding: 0.9rem 1rem;
+      border-radius: var(--radius-sm);
+      background: var(--cream);
+      border: 1px solid rgba(141, 110, 99, 0.18);
+    }
+
+    .brew-prep-step-copy {
+      min-width: 0;
+    }
+
+    .brew-prep-step-label {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--accent);
+      background: rgba(141, 110, 99, 0.1);
+      padding: 0.15rem 0.55rem;
+      border-radius: 100px;
+      margin-bottom: 0.45rem;
+    }
+
+    .brew-prep-step-copy .step-detail {
+      line-height: 1.45;
+    }
+
+    .brew-prep-step-timer {
+      flex-shrink: 0;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--espresso);
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+
+    .brew-prep-step-hint {
+      margin-top: 0.35rem;
+      font-size: 0.7rem;
+      color: var(--light-accent);
+      font-weight: 500;
     }
 
     /* Table Section */
@@ -1383,12 +1456,22 @@
         padding: 1rem 0.75rem 1.5rem;
       }
 
-      .brew-steps, .slider-section, .temperature-section {
+      .brew-steps, .slider-section {
         padding: 1rem 1.15rem;
+      }
+
+      .temperature-estimator-card > summary,
+      .temperature-estimator-card .temperature-body {
+        padding-left: 1.15rem;
+        padding-right: 1.15rem;
       }
 
       .steps-grid {
         grid-template-columns: 1fr 1fr;
+      }
+
+      .brew-prep-step {
+        align-items: flex-start;
       }
 
       table {
@@ -1579,7 +1662,7 @@
       .brew-steps,
       .brew-intro,
       .slider-section,
-      .temperature-section,
+      .temperature-estimator-card,
       .table-section,
       .faq-item,
       .favorites-section {
@@ -1625,9 +1708,50 @@
           <li>Weigh everything on an <strong>accurate scale</strong> (0.1 g resolution, with a timer).</li>
           <li><strong>Fold the paper filter</strong> along its seam and place it in the dripper.</li>
           <li><strong>Rinse the filter and preheat the decanter</strong>: pour hot water through the paper until the decanter fills up a bit, then discard that water. This removes the paper taste and warms everything up.</li>
-          <li>Grind your coffee <strong>medium-coarse</strong> and use water <strong>just off the boil</strong> (~95 °C). No temperature kettle? Use the boil-based estimator below.</li>
+          <li>Grind your coffee <strong>medium-coarse</strong> and use water <strong>just off the boil</strong> (~95 °C). No temperature kettle? Open the boil-based estimator just below.</li>
         </ol>
         <p>Then tap a row in the recipe table below to load the brew steps and start your timer.</p>
+      </div>
+    </details>
+
+    <details class="brew-intro temperature-estimator-card" id="temperatureEstimator">
+      <summary>Boil-Based Temperature Estimator</summary>
+      <div class="intro-body temperature-body">
+        <p class="temperature-hint">Using a stovetop or non-temperature kettle? Bring the water to a full boil, pick your kettle fill and target brew temperature, then wait the suggested time before you pour.</p>
+        <div class="temperature-controls">
+          <div class="temperature-field">
+            <label for="temperatureEstimatorVolume">Kettle fill</label>
+            <select id="temperatureEstimatorVolume">
+              <option value="300">300 ml</option>
+              <option value="500" selected>500 ml</option>
+              <option value="1000">1 L</option>
+            </select>
+          </div>
+          <div class="temperature-field">
+            <label for="temperatureEstimatorTarget">Target brew temperature</label>
+            <select id="temperatureEstimatorTarget">
+              <option value="90">90 °C</option>
+              <option value="91">91 °C</option>
+              <option value="92">92 °C</option>
+              <option value="93">93 °C</option>
+              <option value="94" selected>94 °C</option>
+              <option value="95">95 °C</option>
+              <option value="96">96 °C</option>
+            </select>
+          </div>
+        </div>
+        <div class="temperature-estimate" id="temperatureEstimatorResult" aria-live="polite"></div>
+        <div class="temperature-guidance">
+          <strong class="temperature-guidance-title">Where to start</strong>
+          <ul>
+            <li><strong>Light roasts:</strong> usually 94–96 °C</li>
+            <li><strong>Medium roasts:</strong> usually 92–94 °C</li>
+            <li><strong>Dark roasts:</strong> usually 90–92 °C</li>
+          </ul>
+          <p class="temperature-note">Taste is the best guide: if the cup is sharp or under-extracted, try a hotter target next time; if it tastes bitter or roasty, try a cooler one.</p>
+        </div>
+        <ul class="temperature-timeline" id="temperatureEstimatorTimeline"></ul>
+        <p class="temperature-note">Approximate guide for a stainless steel gooseneck kettle in a typical room. A colder kitchen usually needs a little more wait time; a warmer room usually cools a little faster.</p>
       </div>
     </details>
 
@@ -1644,6 +1768,14 @@
       </div>
       <div id="noRecipeNotice" class="no-recipe-notice">
         👇 Tap a row in the recipe table to load a brew
+      </div>
+      <div class="brew-prep-step" id="temperaturePrepStep" style="display:none;">
+        <div class="brew-prep-step-copy">
+          <div class="brew-prep-step-label">0 — Water</div>
+          <div class="step-detail" id="temperaturePrepDetail">Bring the water to a <strong>full boil</strong>, then wait before you bloom.</div>
+          <div class="brew-prep-step-hint" id="temperaturePrepHint"></div>
+        </div>
+        <div class="brew-prep-step-timer" id="temperaturePrepTimer">0:00</div>
       </div>
       <div class="steps-grid" id="stepsGrid" style="display:none;">
         <div class="step locked" id="step0" data-step="0">
@@ -1713,36 +1845,6 @@
         </div>
         <button type="button" class="btn-reset-ratio hidden" id="btnResetRatio">Reset to 1:16.7</button>
       </div>
-    </section>
-
-    <section class="temperature-section" aria-labelledby="temperatureEstimatorTitle">
-      <h2 id="temperatureEstimatorTitle">Boil-Based Temperature Estimator</h2>
-      <p class="temperature-hint">Using a stovetop or non-temperature kettle? Bring the water to a full boil, pick your kettle fill and target brew temperature, then wait the suggested time before you pour.</p>
-      <div class="temperature-controls">
-        <div class="temperature-field">
-          <label for="temperatureEstimatorVolume">Kettle fill</label>
-          <select id="temperatureEstimatorVolume">
-            <option value="300">300 ml</option>
-            <option value="500" selected>500 ml</option>
-            <option value="1000">1 L</option>
-          </select>
-        </div>
-        <div class="temperature-field">
-          <label for="temperatureEstimatorTarget">Target brew temperature</label>
-          <select id="temperatureEstimatorTarget">
-            <option value="90">90 °C</option>
-            <option value="91">91 °C</option>
-            <option value="92">92 °C</option>
-            <option value="93">93 °C</option>
-            <option value="94" selected>94 °C</option>
-            <option value="95">95 °C</option>
-            <option value="96">96 °C</option>
-          </select>
-        </div>
-      </div>
-      <div class="temperature-estimate" id="temperatureEstimatorResult" aria-live="polite"></div>
-      <ul class="temperature-timeline" id="temperatureEstimatorTimeline"></ul>
-      <p class="temperature-note">Approximate guide for a stainless steel gooseneck kettle in a typical room. A colder kitchen usually needs a little more wait time; a warmer room usually cools a little faster.</p>
     </section>
 
     <section class="table-section">
@@ -1914,6 +2016,10 @@
     const temperatureEstimatorTarget = document.getElementById('temperatureEstimatorTarget');
     const temperatureEstimatorResult = document.getElementById('temperatureEstimatorResult');
     const temperatureEstimatorTimeline = document.getElementById('temperatureEstimatorTimeline');
+    const temperaturePrepStep = document.getElementById('temperaturePrepStep');
+    const temperaturePrepDetail = document.getElementById('temperaturePrepDetail');
+    const temperaturePrepHint = document.getElementById('temperaturePrepHint');
+    const temperaturePrepTimer = document.getElementById('temperaturePrepTimer');
 
     const stepsGrid = document.getElementById('stepsGrid');
     const noRecipeNotice = document.getElementById('noRecipeNotice');
@@ -2706,6 +2812,7 @@
 
       // Reset brew state
       resetBrewState({ releaseLock: false });
+      renderTemperatureEstimator();
 
       // Show the share button now that a recipe is selected, and sync URL
       if (btnShareRecipe) btnShareRecipe.hidden = false;
@@ -2753,6 +2860,10 @@
       // First step is available
       if (selectedRecipe) {
         stepStates[0] = 'available';
+      }
+
+      if (temperaturePrepStep) {
+        temperaturePrepStep.style.display = selectedRecipe ? '' : 'none';
       }
 
       // Hide completion message, restore steps grid
@@ -2813,6 +2924,27 @@
       return `~${minutes} min ${remainingSeconds} sec`;
     }
 
+    function getTemperatureEstimatorSelection() {
+      const volume = parseInt(temperatureEstimatorVolume.value, 10);
+      const targetTemp = parseInt(temperatureEstimatorTarget.value, 10);
+      const profile = BOIL_ESTIMATOR_PROFILES[volume] || BOIL_ESTIMATOR_PROFILES[500];
+      const waitSeconds = estimateWaitTime(profile, targetTemp);
+      const volumeLabel = volume === 1000 ? '1 L' : `${volume} ml`;
+
+      return { volume, volumeLabel, targetTemp, profile, waitSeconds };
+    }
+
+    function renderTemperaturePrepStep(selection) {
+      if (!temperaturePrepStep || !temperaturePrepDetail || !temperaturePrepHint || !temperaturePrepTimer) {
+        return;
+      }
+
+      temperaturePrepDetail.innerHTML = `Bring the water to a <strong>full boil</strong>, then wait for about <strong>${selection.targetTemp} °C</strong> before you bloom.`;
+      temperaturePrepHint.textContent = `${selection.volumeLabel} fill • start the bloom after this countdown`;
+      temperaturePrepTimer.textContent = formatTime(selection.waitSeconds);
+      temperaturePrepStep.style.display = selectedRecipe ? '' : 'none';
+    }
+
     function estimateWaitTime(profile, targetTemp) {
       if (!Array.isArray(profile) || profile.length === 0) {
         return 0;
@@ -2841,16 +2973,13 @@
         return;
       }
 
-      const volume = parseInt(temperatureEstimatorVolume.value, 10);
-      const targetTemp = parseInt(temperatureEstimatorTarget.value, 10);
-      const profile = BOIL_ESTIMATOR_PROFILES[volume] || BOIL_ESTIMATOR_PROFILES[500];
-      const waitSeconds = estimateWaitTime(profile, targetTemp);
-      const volumeLabel = volume === 1000 ? '1 L' : `${volume} ml`;
+      const selection = getTemperatureEstimatorSelection();
 
-      temperatureEstimatorResult.innerHTML = `Bring the water to a <strong>full boil</strong>, then wait <strong>${formatWaitTime(waitSeconds)}</strong> for about <strong>${targetTemp} °C</strong> using the <strong>${volumeLabel}</strong> profile.`;
-      temperatureEstimatorTimeline.innerHTML = profile
+      temperatureEstimatorResult.innerHTML = `Bring the water to a <strong>full boil</strong>, then wait <strong>${formatWaitTime(selection.waitSeconds)}</strong> for about <strong>${selection.targetTemp} °C</strong> using the <strong>${selection.volumeLabel}</strong> profile.`;
+      temperatureEstimatorTimeline.innerHTML = selection.profile
         .map(point => `<li>${point.seconds}s → ~${point.temp} °C</li>`)
         .join('');
+      renderTemperaturePrepStep(selection);
     }
 
     // --- Notification support ---
@@ -3007,6 +3136,9 @@
       stepsGrid.addEventListener('animationend', () => {
         stepsGrid.style.display = 'none';
       }, { once: true });
+      if (temperaturePrepStep) {
+        temperaturePrepStep.style.display = 'none';
+      }
       document.getElementById('brewComplete').classList.add('show');
 
       // Hide the "brew another one" button initially

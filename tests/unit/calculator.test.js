@@ -185,6 +185,12 @@ describe('V60 Recipe Calculator — Core Logic', () => {
   });
 
   describe('Boil-based temperature estimator', () => {
+    test('estimator card is collapsed by default', () => {
+      const estimator = doc.getElementById('temperatureEstimator');
+
+      expect(estimator.hasAttribute('open')).toBe(false);
+    });
+
     test('defaults to a 500 ml profile targeting 94 °C', () => {
       const result = doc.getElementById('temperatureEstimatorResult');
 
@@ -228,6 +234,11 @@ describe('V60 Recipe Calculator — Core Logic', () => {
     test('no-recipe notice is visible initially', () => {
       const notice = doc.getElementById('noRecipeNotice');
       expect(notice.style.display).not.toBe('none');
+    });
+
+    test('prep step is hidden before recipe selection', () => {
+      const prepStep = doc.getElementById('temperaturePrepStep');
+      expect(prepStep.style.display).toBe('none');
     });
 
     test('all steps are locked initially', () => {
@@ -298,6 +309,17 @@ describe('V60 Recipe Calculator — Core Logic', () => {
       expect(step0Detail).toContain(bloom + 'g');
     });
 
+    test('prep step becomes visible with the estimator countdown after selection', () => {
+      selectRow(250);
+      const prepStep = doc.getElementById('temperaturePrepStep');
+      const prepTimer = doc.getElementById('temperaturePrepTimer');
+      const prepDetail = doc.getElementById('temperaturePrepDetail');
+
+      expect(prepStep.style.display).toBe('');
+      expect(prepTimer.textContent).toBe('1:00');
+      expect(prepDetail.textContent).toContain('94 °C');
+    });
+
     test('step 1 detail contains pour 1 value (40% of water)', () => {
       selectRow(300);
       const step1Detail = doc.getElementById('step1Detail').innerHTML;
@@ -310,6 +332,22 @@ describe('V60 Recipe Calculator — Core Logic', () => {
       const step2Detail = doc.getElementById('step2Detail').innerHTML;
       const pour2 = Math.round(300 * 0.6);
       expect(step2Detail).toContain(pour2 + 'g');
+    });
+
+    test('changing estimator settings updates the prep step recommendation', () => {
+      selectRow(250);
+      const volume = doc.getElementById('temperatureEstimatorVolume');
+      const target = doc.getElementById('temperatureEstimatorTarget');
+      const prepTimer = doc.getElementById('temperaturePrepTimer');
+      const prepHint = doc.getElementById('temperaturePrepHint');
+
+      volume.value = '1000';
+      volume.dispatchEvent(new dom.window.Event('change'));
+      target.value = '93';
+      target.dispatchEvent(new dom.window.Event('change'));
+
+      expect(prepTimer.textContent).toBe('2:30');
+      expect(prepHint.textContent).toContain('1 L fill');
     });
   });
 
