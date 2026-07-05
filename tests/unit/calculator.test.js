@@ -191,30 +191,35 @@ describe('V60 Recipe Calculator — Core Logic', () => {
       expect(estimator.hasAttribute('open')).toBe(false);
     });
 
-    test('defaults to a 500 ml profile targeting 94 °C', () => {
+    test('defaults to a 500 ml profile with no boil timer selected', () => {
+      const volume = doc.getElementById('temperatureEstimatorVolume');
+      const target = doc.getElementById('temperatureEstimatorTarget');
       const result = doc.getElementById('temperatureEstimatorResult');
 
-      expect(result.textContent).toContain('~60 seconds');
-      expect(result.textContent).toContain('94 °C');
-      expect(result.textContent).toContain('500 ml');
+      expect(volume.value).toBe('500');
+      expect(target.value).toBe('');
+      expect(result.textContent).toContain('Select a target brew temperature');
     });
 
     test('changing the target temperature updates the recommended wait time', () => {
       const target = doc.getElementById('temperatureEstimatorTarget');
       const result = doc.getElementById('temperatureEstimatorResult');
 
-      target.value = '93';
+      target.value = '94';
       target.dispatchEvent(new dom.window.Event('change'));
 
-      expect(result.textContent).toContain('~1 min 30 sec');
-      expect(result.textContent).toContain('93 °C');
+      expect(result.textContent).toContain('~60 seconds');
+      expect(result.textContent).toContain('94 °C');
     });
 
     test('changing the kettle fill updates the profile and timeline', () => {
       const volume = doc.getElementById('temperatureEstimatorVolume');
+      const target = doc.getElementById('temperatureEstimatorTarget');
       const result = doc.getElementById('temperatureEstimatorResult');
       const timelineItems = () => doc.querySelectorAll('#temperatureEstimatorTimeline li');
 
+      target.value = '94';
+      target.dispatchEvent(new dom.window.Event('change'));
       volume.value = '1000';
       volume.dispatchEvent(new dom.window.Event('change'));
 
@@ -222,6 +227,21 @@ describe('V60 Recipe Calculator — Core Logic', () => {
       expect(result.textContent).toContain('1 L');
       expect(timelineItems()).toHaveLength(6);
       expect(timelineItems()[3].textContent).toContain('120s → ~94 °C');
+    });
+
+    test('selection is saved to localStorage when estimator inputs change', () => {
+      const volume = doc.getElementById('temperatureEstimatorVolume');
+      const target = doc.getElementById('temperatureEstimatorTarget');
+
+      volume.value = '1000';
+      volume.dispatchEvent(new dom.window.Event('change'));
+      target.value = '93';
+      target.dispatchEvent(new dom.window.Event('change'));
+
+      expect(JSON.parse(dom.window.localStorage.getItem('v60_temperature_estimator'))).toEqual({
+        volume: '1000',
+        target: '93'
+      });
     });
   });
 
@@ -309,15 +329,11 @@ describe('V60 Recipe Calculator — Core Logic', () => {
       expect(step0Detail).toContain(bloom + 'g');
     });
 
-    test('prep step becomes visible with the estimator countdown after selection', () => {
+    test('prep step stays hidden after selection when no estimator target is selected', () => {
       selectRow(250);
       const prepStep = doc.getElementById('temperaturePrepStep');
-      const prepTimer = doc.getElementById('temperaturePrepTimer');
-      const prepDetail = doc.getElementById('temperaturePrepDetail');
 
-      expect(prepStep.style.display).toBe('');
-      expect(prepTimer.textContent).toBe('1:00');
-      expect(prepDetail.textContent).toContain('94 °C');
+      expect(prepStep.style.display).toBe('none');
     });
 
     test('step 1 detail contains pour 1 value (40% of water)', () => {
@@ -332,6 +348,23 @@ describe('V60 Recipe Calculator — Core Logic', () => {
       const step2Detail = doc.getElementById('step2Detail').innerHTML;
       const pour2 = Math.round(300 * 0.6);
       expect(step2Detail).toContain(pour2 + 'g');
+    });
+
+    test('selecting a target shows the prep step and locks bloom until it is done', () => {
+      selectRow(250);
+      const target = doc.getElementById('temperatureEstimatorTarget');
+      const prepStep = doc.getElementById('temperaturePrepStep');
+      const prepTimer = doc.getElementById('temperaturePrepTimer');
+      const prepDetail = doc.getElementById('temperaturePrepDetail');
+      const bloomStep = doc.getElementById('step0');
+
+      target.value = '94';
+      target.dispatchEvent(new dom.window.Event('change'));
+
+      expect(prepStep.style.display).toBe('');
+      expect(prepTimer.textContent).toBe('1:00');
+      expect(prepDetail.textContent).toContain('94 °C');
+      expect(bloomStep.classList.contains('locked')).toBe(true);
     });
 
     test('changing estimator settings updates the prep step recommendation', () => {
@@ -363,6 +396,28 @@ describe('V60 Recipe Calculator — Core Logic', () => {
       const step0 = doc.getElementById('step0');
       step0.click();
       expect(step0.classList.contains('countdown')).toBe(true);
+    });
+
+    test('water prep step can be started and unlocks bloom when skipped', () => {
+      const rows = doc.querySelectorAll('#recipeTableBody tr');
+      const row = Array.from(rows).find(r => r.dataset.water === '250');
+      const target = doc.getElementById('temperatureEstimatorTarget');
+      const prepStep = doc.getElementById('temperaturePrepStep');
+      const prepTimer = doc.getElementById('temperaturePrepTimer');
+      const bloomStep = doc.getElementById('step0');
+
+      row.click();
+      target.value = '94';
+      target.dispatchEvent(new dom.window.Event('change'));
+
+      prepStep.click();
+      expect(prepStep.classList.contains('running')).toBe(true);
+
+      prepStep.click();
+
+      expect(prepTimer.textContent).toBe('0:00');
+      expect(prepStep.classList.contains('completed')).toBe(true);
+      expect(bloomStep.classList.contains('available')).toBe(true);
     });
 
     test('tapping step 0 during countdown skips to running', () => {

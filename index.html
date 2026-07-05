@@ -265,6 +265,7 @@
       margin-bottom: 1.5rem;
       overflow: hidden;
       border: 1px solid rgba(141, 110, 99, 0.1);
+      border-top: 3px solid var(--accent);
     }
 
     .brew-intro[open] {
@@ -746,6 +747,15 @@
       font-weight: 500;
     }
 
+    .brew-prep-step.running .brew-prep-step-hint {
+      color: var(--highlight-border);
+    }
+
+    .brew-prep-step.completed .brew-prep-step-hint {
+      color: var(--green-text);
+      opacity: 0.7;
+    }
+
     .btn-reset-ratio {
       font-family: 'Inter', sans-serif;
       font-size: 0.7rem;
@@ -882,6 +892,9 @@
     }
 
     .brew-prep-step {
+      width: 100%;
+      appearance: none;
+      -webkit-appearance: none;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -891,9 +904,38 @@
       border-radius: var(--radius-sm);
       background: var(--cream);
       border: 1px solid rgba(141, 110, 99, 0.18);
+      text-align: left;
+      font: inherit;
+    }
+
+    .brew-prep-step.available,
+    .brew-prep-step.running {
+      cursor: pointer;
+    }
+
+    .brew-prep-step.available:hover {
+      background: #F5EFEB;
+      box-shadow: 0 2px 8px rgba(141, 110, 99, 0.2);
+    }
+
+    .brew-prep-step.running {
+      border-color: var(--highlight-border);
+      background: var(--highlight-bg);
+      animation: pulse-border 1.5s ease-in-out infinite;
+    }
+
+    .brew-prep-step.completed {
+      background: var(--green-light);
+      border-color: var(--green-border);
+    }
+
+    .brew-prep-step:focus-visible {
+      outline: 3px solid rgba(141, 110, 99, 0.35);
+      outline-offset: 2px;
     }
 
     .brew-prep-step-copy {
+      display: block;
       min-width: 0;
     }
 
@@ -911,16 +953,30 @@
     }
 
     .brew-prep-step-copy .step-detail {
+      display: block;
       line-height: 1.45;
     }
 
+    .brew-prep-step.completed .brew-prep-step-copy .step-detail strong {
+      color: var(--green-text);
+    }
+
     .brew-prep-step-timer {
+      display: block;
       flex-shrink: 0;
       font-size: 1.4rem;
       font-weight: 700;
       color: var(--espresso);
       font-variant-numeric: tabular-nums;
       text-align: right;
+    }
+
+    .brew-prep-step.running .brew-prep-step-timer {
+      color: var(--highlight-border);
+    }
+
+    .brew-prep-step.completed .brew-prep-step-timer {
+      color: var(--green-text);
     }
 
     .brew-prep-step-hint {
@@ -1730,11 +1786,12 @@
           <div class="temperature-field">
             <label for="temperatureEstimatorTarget">Target brew temperature</label>
             <select id="temperatureEstimatorTarget">
+              <option value="" selected>No boil timer</option>
               <option value="90">90 °C</option>
               <option value="91">91 °C</option>
               <option value="92">92 °C</option>
               <option value="93">93 °C</option>
-              <option value="94" selected>94 °C</option>
+              <option value="94">94 °C</option>
               <option value="95">95 °C</option>
               <option value="96">96 °C</option>
             </select>
@@ -1769,14 +1826,14 @@
       <div id="noRecipeNotice" class="no-recipe-notice">
         👇 Tap a row in the recipe table to load a brew
       </div>
-      <div class="brew-prep-step" id="temperaturePrepStep" style="display:none;">
-        <div class="brew-prep-step-copy">
-          <div class="brew-prep-step-label">0 — Water</div>
-          <div class="step-detail" id="temperaturePrepDetail">Bring the water to a <strong>full boil</strong>, then wait before you bloom.</div>
-          <div class="brew-prep-step-hint" id="temperaturePrepHint"></div>
-        </div>
-        <div class="brew-prep-step-timer" id="temperaturePrepTimer">0:00</div>
-      </div>
+      <button type="button" class="brew-prep-step" id="temperaturePrepStep" style="display:none;" aria-hidden="true">
+        <span class="brew-prep-step-copy">
+          <span class="brew-prep-step-label">0 — Water</span>
+          <span class="step-detail" id="temperaturePrepDetail">Bring the water to a <strong>full boil</strong>, then wait before you bloom.</span>
+          <span class="brew-prep-step-hint" id="temperaturePrepHint"></span>
+        </span>
+        <span class="brew-prep-step-timer" id="temperaturePrepTimer">0:00</span>
+      </button>
       <div class="steps-grid" id="stepsGrid" style="display:none;">
         <div class="step locked" id="step0" data-step="0">
           <div class="step-label">1 — Bloom</div>
@@ -2410,6 +2467,7 @@
 
     // --- Last Brew Persistence ---
     const LAST_BREW_KEY = 'v60_last_brew';
+    const TEMPERATURE_ESTIMATOR_KEY = 'v60_temperature_estimator';
 
     function saveLastBrew(recipe, ratio) {
       writeJSONStorage(LAST_BREW_KEY, {
@@ -2427,6 +2485,34 @@
       removeStorage(LAST_BREW_KEY);
     }
 
+    function saveTemperatureEstimatorState(volume, target) {
+      writeJSONStorage(TEMPERATURE_ESTIMATOR_KEY, {
+        volume: String(volume || '500'),
+        target: String(target || '')
+      });
+    }
+
+    function loadTemperatureEstimatorState() {
+      const stored = readJSONStorage(TEMPERATURE_ESTIMATOR_KEY, null);
+      if (!stored || typeof stored !== 'object') {
+        return { volume: '500', target: '' };
+      }
+
+      const volume = ['300', '500', '1000'].includes(String(stored.volume)) ? String(stored.volume) : '500';
+      const target = ['', '90', '91', '92', '93', '94', '95', '96'].includes(String(stored.target)) ? String(stored.target) : '';
+      return { volume, target };
+    }
+
+    function restoreTemperatureEstimatorState() {
+      if (!temperatureEstimatorVolume || !temperatureEstimatorTarget) {
+        return;
+      }
+
+      const selection = loadTemperatureEstimatorState();
+      temperatureEstimatorVolume.value = selection.volume;
+      temperatureEstimatorTarget.value = selection.target;
+    }
+
     // --- Brew state ---
     let selectedRecipe = null; // { water, coffee, bloom, pour1, pour2, pour3, pour4 }
     let stepStates = []; // 'locked' | 'available' | 'running' | 'completed'
@@ -2437,6 +2523,10 @@
     let brewCompleteTimers = []; // timers for post-brew-complete actions
     let countdownTimer = null; // setInterval ID for the 3-2-1 pre-start countdown
     let countdownCount = 0;    // current countdown number displayed (3, 2, or 1)
+    let temperaturePrepState = 'hidden'; // 'hidden' | 'available' | 'running' | 'completed'
+    let temperaturePrepRemaining = 0;
+    let temperaturePrepStartedAt = null;
+    let temperaturePrepInterval = null;
 
     // Per-step metadata: duration (seconds) and completion notification copy.
     // Durations are derived from James Hoffmann's improved V60 technique:
@@ -2844,6 +2934,7 @@
       for (let i = 0; i < STEP_COUNT; i++) {
         if (stepTimers[i]) clearInterval(stepTimers[i]);
       }
+      clearTemperaturePrepTimer();
       stepTimers = new Array(STEP_COUNT).fill(null);
       stepStartTimes = new Array(STEP_COUNT).fill(null);
       stepRemaining = STEP_DURATIONS.slice(); // copy durations as initial countdown
@@ -2859,11 +2950,18 @@
 
       // First step is available
       if (selectedRecipe) {
-        stepStates[0] = 'available';
-      }
-
-      if (temperaturePrepStep) {
-        temperaturePrepStep.style.display = selectedRecipe ? '' : 'none';
+        const selection = getTemperatureEstimatorSelection();
+        if (selection.targetTemp !== null) {
+          temperaturePrepState = 'available';
+          temperaturePrepRemaining = selection.waitSeconds;
+        } else {
+          temperaturePrepState = 'hidden';
+          temperaturePrepRemaining = 0;
+          stepStates[0] = 'available';
+        }
+      } else {
+        temperaturePrepState = 'hidden';
+        temperaturePrepRemaining = 0;
       }
 
       // Hide completion message, restore steps grid
@@ -2872,6 +2970,7 @@
       document.getElementById('brewComplete').classList.remove('show');
       document.getElementById('btnBrewAgain').classList.remove('visible');
 
+      renderTemperaturePrepStep(getTemperatureEstimatorSelection());
       renderSteps();
     }
 
@@ -2926,12 +3025,30 @@
 
     function getTemperatureEstimatorSelection() {
       const volume = parseInt(temperatureEstimatorVolume.value, 10);
-      const targetTemp = parseInt(temperatureEstimatorTarget.value, 10);
+      const targetValue = temperatureEstimatorTarget.value;
+      const targetTemp = targetValue ? parseInt(targetValue, 10) : null;
       const profile = BOIL_ESTIMATOR_PROFILES[volume] || BOIL_ESTIMATOR_PROFILES[500];
-      const waitSeconds = estimateWaitTime(profile, targetTemp);
       const volumeLabel = volume === 1000 ? '1 L' : `${volume} ml`;
+      const waitSeconds = targetTemp === null ? 0 : estimateWaitTime(profile, targetTemp);
 
       return { volume, volumeLabel, targetTemp, profile, waitSeconds };
+    }
+
+    function clearTemperaturePrepTimer() {
+      if (temperaturePrepInterval !== null) {
+        clearInterval(temperaturePrepInterval);
+        temperaturePrepInterval = null;
+      }
+      temperaturePrepStartedAt = null;
+    }
+
+    function hasTemperaturePrep() {
+      const selection = getTemperatureEstimatorSelection();
+      return Boolean(selectedRecipe && selection.targetTemp);
+    }
+
+    function hasStartedBrewSteps() {
+      return stepStates.some(state => state === 'countdown' || state === 'running' || state === 'completed');
     }
 
     function renderTemperaturePrepStep(selection) {
@@ -2939,10 +3056,35 @@
         return;
       }
 
+      if (!selectedRecipe || !selection || selection.targetTemp === null) {
+        temperaturePrepStep.style.display = 'none';
+        temperaturePrepStep.className = 'brew-prep-step';
+        temperaturePrepStep.setAttribute('aria-hidden', 'true');
+        temperaturePrepHint.textContent = '';
+        temperaturePrepTimer.textContent = '0:00';
+        return;
+      }
+
       temperaturePrepDetail.innerHTML = `Bring the water to a <strong>full boil</strong>, then wait for about <strong>${selection.targetTemp} °C</strong> before you bloom.`;
-      temperaturePrepHint.textContent = `${selection.volumeLabel} fill • start the bloom after this countdown`;
-      temperaturePrepTimer.textContent = formatTime(selection.waitSeconds);
-      temperaturePrepStep.style.display = selectedRecipe ? '' : 'none';
+      const prepSeconds = temperaturePrepState === 'completed'
+        ? 0
+        : (temperaturePrepRemaining || selection.waitSeconds);
+      temperaturePrepTimer.textContent = formatTime(Math.max(0, prepSeconds));
+      temperaturePrepStep.style.display = '';
+      temperaturePrepStep.className = `brew-prep-step ${temperaturePrepState}`;
+      temperaturePrepStep.setAttribute('aria-hidden', 'false');
+
+      switch (temperaturePrepState) {
+        case 'running':
+          temperaturePrepHint.textContent = `${selection.volumeLabel} fill • ⏱ Tap to skip`;
+          break;
+        case 'completed':
+          temperaturePrepHint.textContent = `${selection.volumeLabel} fill • ✓ Water ready`;
+          break;
+        default:
+          temperaturePrepHint.textContent = `${selection.volumeLabel} fill • ▶ Tap to start`;
+          break;
+      }
     }
 
     function estimateWaitTime(profile, targetTemp) {
@@ -2975,7 +3117,11 @@
 
       const selection = getTemperatureEstimatorSelection();
 
-      temperatureEstimatorResult.innerHTML = `Bring the water to a <strong>full boil</strong>, then wait <strong>${formatWaitTime(selection.waitSeconds)}</strong> for about <strong>${selection.targetTemp} °C</strong> using the <strong>${selection.volumeLabel}</strong> profile.`;
+      if (selection.targetTemp === null) {
+        temperatureEstimatorResult.innerHTML = `Select a target brew temperature if you want to add the optional <strong>0 — Water</strong> timer before the bloom.`;
+      } else {
+        temperatureEstimatorResult.innerHTML = `Bring the water to a <strong>full boil</strong>, then wait <strong>${formatWaitTime(selection.waitSeconds)}</strong> for about <strong>${selection.targetTemp} °C</strong> using the <strong>${selection.volumeLabel}</strong> profile.`;
+      }
       temperatureEstimatorTimeline.innerHTML = selection.profile
         .map(point => `<li>${point.seconds}s → ~${point.temp} °C</li>`)
         .join('');
@@ -3168,6 +3314,45 @@
 
     // --- Countdown helpers ---
 
+    function completeTemperaturePrepStep() {
+      clearTemperaturePrepTimer();
+      temperaturePrepRemaining = 0;
+      temperaturePrepState = 'completed';
+      stepStates[0] = 'available';
+      renderTemperaturePrepStep(getTemperatureEstimatorSelection());
+      renderSteps();
+    }
+
+    function startTemperaturePrepStep() {
+      clearTemperaturePrepTimer();
+      temperaturePrepState = 'running';
+      temperaturePrepStartedAt = Date.now();
+      const duration = temperaturePrepRemaining || getTemperatureEstimatorSelection().waitSeconds;
+      temperaturePrepRemaining = duration;
+      temperaturePrepInterval = setInterval(() => {
+        const elapsed = (Date.now() - temperaturePrepStartedAt) / 1000;
+        temperaturePrepRemaining = Math.max(0, Math.ceil(duration - elapsed));
+        renderTemperaturePrepStep(getTemperatureEstimatorSelection());
+        if (temperaturePrepRemaining <= 0) {
+          completeTemperaturePrepStep();
+        }
+      }, 200);
+      renderTemperaturePrepStep(getTemperatureEstimatorSelection());
+    }
+
+    function handleTemperaturePrepClick() {
+      if (!hasTemperaturePrep()) {
+        return;
+      }
+
+      if (temperaturePrepState === 'available') {
+        requestWakeLock();
+        startTemperaturePrepStep();
+      } else if (temperaturePrepState === 'running') {
+        completeTemperaturePrepStep();
+      }
+    }
+
     function cancelCountdown() {
       if (countdownTimer !== null) {
         clearInterval(countdownTimer);
@@ -3234,6 +3419,10 @@
 
       if (state === 'available') {
         if (stepIndex === 0) {
+          if (temperaturePrepState === 'running') {
+            completeTemperaturePrepStep();
+          }
+
           // Acquire the wake lock FIRST and as the only API call inside this
           // user gesture. On iOS PWA, opening another permission prompt
           // (e.g. Notification.requestPermission) in the same gesture causes
@@ -3284,8 +3473,20 @@
     // --- Slider events ---
     slider.addEventListener('input', handleSliderInput);
     btnResetRatio.addEventListener('click', resetRatio);
-    temperatureEstimatorVolume.addEventListener('change', renderTemperatureEstimator);
-    temperatureEstimatorTarget.addEventListener('change', renderTemperatureEstimator);
+    function handleTemperatureEstimatorChange() {
+      saveTemperatureEstimatorState(temperatureEstimatorVolume.value, temperatureEstimatorTarget.value);
+      if (selectedRecipe && !hasStartedBrewSteps()) {
+        resetBrewState({ releaseLock: false });
+      } else {
+        renderTemperatureEstimator();
+      }
+    }
+    temperatureEstimatorVolume.addEventListener('change', handleTemperatureEstimatorChange);
+    temperatureEstimatorTarget.addEventListener('change', handleTemperatureEstimatorChange);
+
+    if (temperaturePrepStep) {
+      temperaturePrepStep.addEventListener('click', handleTemperaturePrepClick);
+    }
 
     // --- Share button ---
     async function shareCurrentRecipe() {
@@ -3328,6 +3529,7 @@
 
     // --- Init ---
     applyUrlParams();
+    restoreTemperatureEstimatorState();
     renderTemperatureEstimator();
     renderFavorites();
 
