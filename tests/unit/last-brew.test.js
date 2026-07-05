@@ -298,5 +298,35 @@ describe('V60 Recipe — Last Brew Persistence', () => {
 
       dom2.window.close();
     });
+
+    test('saved no-boil-timer preference keeps water step hidden on the next brew', () => {
+      const lastBrewData = JSON.stringify({
+        recipe: { water: 300, coffee: '18.0', bloom: '60', pour1: '120', pour2: '180', pour3: '240', pour4: '300' },
+        ratio: 16.7,
+        completedAt: Date.now()
+      });
+      const temperatureEstimatorData = JSON.stringify({
+        volume: '1000',
+        target: ''
+      });
+
+      const dom2 = new JSDOM(html, {
+        runScripts: 'dangerously',
+        pretendToBeVisual: true,
+        url: 'http://localhost',
+        beforeParse(window) {
+          window.localStorage.setItem('v60_last_brew', lastBrewData);
+          window.localStorage.setItem('v60_temperature_estimator', temperatureEstimatorData);
+        }
+      });
+      const doc2 = dom2.window.document;
+
+      expect(doc2.getElementById('temperatureEstimatorVolume').value).toBe('1000');
+      expect(doc2.getElementById('temperatureEstimatorTarget').value).toBe('');
+      expect(doc2.getElementById('temperaturePrepStep').style.display).toBe('none');
+      expect(doc2.getElementById('step0').classList.contains('available')).toBe(true);
+
+      dom2.window.close();
+    });
   });
 });
