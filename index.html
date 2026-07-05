@@ -1210,66 +1210,144 @@
 
     /* Footer */
     footer {
+      position: relative;
       text-align: center;
-      padding: 1.5rem 1rem;
-      font-size: 0.8rem;
-      color: var(--light-accent);
+      padding: 2.25rem 1rem 2rem;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      background:
+        radial-gradient(120% 100% at 50% 0%, rgba(141, 110, 99, 0.06) 0%, transparent 60%),
+        var(--cream-light);
       border-top: 1px solid var(--cream);
+    }
+
+    /* Decorative gradient rule that sits on top of the border */
+    footer::before {
+      content: "";
+      position: absolute;
+      top: -1px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(180px, 60%);
+      height: 3px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, transparent, var(--accent) 35%, var(--espresso) 50%, var(--accent) 65%, transparent);
+      opacity: 0.55;
+    }
+
+    .footer-credits {
+      margin: 0 auto;
+      max-width: 34rem;
+      line-height: 1.7;
+    }
+
+    .footer-credits a {
+      position: relative;
     }
 
     footer a {
       color: var(--accent);
       text-decoration: none;
-      font-weight: 500;
+      font-weight: 600;
+      transition: color 0.15s;
     }
 
     footer a:hover {
+      color: var(--espresso);
       text-decoration: underline;
+      text-underline-offset: 3px;
     }
 
     .commit-sha {
       display: block;
-      margin-top: 0.5rem;
+      margin-top: 0.75rem;
       font-size: 0.7rem;
       color: var(--light-accent);
-      opacity: 0.6;
+      opacity: 0.7;
       font-weight: normal;
+      letter-spacing: 0.04em;
+    }
+
+    .commit-sha a {
+      font-family: 'SF Mono', ui-monospace, 'Menlo', 'Consolas', monospace;
+      font-weight: 500;
+      color: var(--light-accent);
+    }
+
+    .commit-sha a:hover {
+      color: var(--accent);
     }
 
     .github-star {
-      margin-top: 0.75rem;
-      padding-top: 0.75rem;
-      border-top: 1px solid var(--cream);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 1.25rem;
+      padding-top: 1.25rem;
       font-size: 0.85rem;
+      position: relative;
+    }
+
+    /* Small coffee-themed divider above the star section */
+    .github-star::before {
+      content: "☕";
+      position: absolute;
+      top: -0.65rem;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 0 0.6rem;
+      font-size: 0.8rem;
+      line-height: 1;
+      background: var(--cream-light);
+      color: var(--light-accent);
+    }
+
+    .github-star::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(220px, 70%);
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--cream) 20%, var(--accent) 50%, var(--cream) 80%, transparent);
+      z-index: -1;
     }
 
     .github-star-button {
       display: inline-flex;
       align-items: center;
-      gap: 0.4rem;
-      padding: 0.4rem 0.8rem;
-      background: var(--white);
+      gap: 0.5rem;
+      padding: 0.55rem 1.1rem;
+      background: linear-gradient(160deg, var(--white) 0%, var(--cream-light) 100%);
       border: 1px solid var(--cream);
-      border-radius: 6px;
+      border-radius: 999px;
       color: var(--text-primary);
       text-decoration: none;
-      font-weight: 500;
-      transition: all 0.2s;
+      font-weight: 600;
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s, background 0.2s;
       margin: 0.5rem 0;
       box-shadow: var(--shadow);
     }
 
     .github-star-button:hover {
-      background: var(--cream-light);
-      border-color: var(--accent);
-      box-shadow: var(--shadow-lg);
+      background: linear-gradient(160deg, var(--white) 0%, #FFF7EC 100%);
+      border-color: var(--highlight-border);
+      box-shadow: var(--shadow-lg), 0 0 0 3px rgba(255, 179, 0, 0.12);
       text-decoration: none;
-      transform: translateY(-1px);
+      transform: translateY(-2px);
+      color: var(--espresso);
     }
 
     .github-star-icon {
       font-size: 1rem;
       color: #FFB300;
+      filter: drop-shadow(0 1px 2px rgba(255, 179, 0, 0.4));
+      transition: transform 0.2s;
+    }
+
+    .github-star-button:hover .github-star-icon {
+      transform: rotate(-12deg) scale(1.15);
     }
 
     .github-star-count {
@@ -1685,14 +1763,15 @@
       }
 
       .github-star-button {
-        background: var(--white);
+        background: linear-gradient(160deg, var(--white) 0%, #2C2220 100%);
         border-color: var(--cream);
         color: var(--text-primary);
       }
 
       .github-star-button:hover {
-        background: var(--cream);
-        border-color: var(--accent);
+        background: linear-gradient(160deg, var(--white) 0%, #3A2A16 100%);
+        border-color: var(--highlight-border);
+        color: #F5E6D3;
       }
 
       .slider-track-container input[type="range"] {
@@ -2004,7 +2083,7 @@
   </main>
 
   <footer>
-    Recipe by <a href="https://www.youtube.com/watch?v=1oB1oDrDkHM" target="_blank" rel="noopener">James Hoffmann</a> · Built by <a href="https://github.com/DevSecNinja" target="_blank" rel="noopener">DevSecNinja</a>
+    <p class="footer-credits">Recipe by <a href="https://www.youtube.com/watch?v=1oB1oDrDkHM" target="_blank" rel="noopener">James Hoffmann</a> · Built by <a href="https://github.com/DevSecNinja" target="_blank" rel="noopener">DevSecNinja</a></p>
     <span class="commit-sha" id="commitSha"><a href="https://github.com/DevSecNinja/v60-brew-guide/commits" target="_blank" rel="noopener" id="commitShaLink">dev</a></span>
     <div class="github-star" id="githubStarSection">
       <a href="https://github.com/DevSecNinja/v60-brew-guide" target="_blank" rel="noopener" class="github-star-button" id="githubStarButton">
