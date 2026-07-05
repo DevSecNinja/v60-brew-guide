@@ -184,6 +184,41 @@ describe('V60 Recipe Calculator — Core Logic', () => {
     });
   });
 
+  describe('Boil-based temperature estimator', () => {
+    test('defaults to a 500 ml profile targeting 94 °C', () => {
+      const result = doc.getElementById('temperatureEstimatorResult');
+
+      expect(result.textContent).toContain('~60 seconds');
+      expect(result.textContent).toContain('94 °C');
+      expect(result.textContent).toContain('500 ml');
+    });
+
+    test('changing the target temperature updates the recommended wait time', () => {
+      const target = doc.getElementById('temperatureEstimatorTarget');
+      const result = doc.getElementById('temperatureEstimatorResult');
+
+      target.value = '93';
+      target.dispatchEvent(new dom.window.Event('change'));
+
+      expect(result.textContent).toContain('~1 min 30 sec');
+      expect(result.textContent).toContain('93 °C');
+    });
+
+    test('changing the kettle fill updates the profile and timeline', () => {
+      const volume = doc.getElementById('temperatureEstimatorVolume');
+      const result = doc.getElementById('temperatureEstimatorResult');
+      const timelineItems = () => doc.querySelectorAll('#temperatureEstimatorTimeline li');
+
+      volume.value = '1000';
+      volume.dispatchEvent(new dom.window.Event('change'));
+
+      expect(result.textContent).toContain('~2 minutes');
+      expect(result.textContent).toContain('1 L');
+      expect(timelineItems()).toHaveLength(6);
+      expect(timelineItems()[3].textContent).toContain('120s → ~94 °C');
+    });
+  });
+
   describe('Brew steps — initial state', () => {
     test('steps grid is hidden before recipe selection', () => {
       const stepsGrid = doc.getElementById('stepsGrid');

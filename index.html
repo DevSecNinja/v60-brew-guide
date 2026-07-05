@@ -769,6 +769,94 @@
       visibility: hidden;
     }
 
+    /* Temperature Estimator */
+    .temperature-section {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid rgba(141, 110, 99, 0.1);
+      border-top: 3px solid var(--accent);
+    }
+
+    .temperature-section h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+      color: var(--espresso);
+      letter-spacing: -0.01em;
+    }
+
+    .temperature-hint,
+    .temperature-note {
+      margin: 0;
+      font-size: 0.8rem;
+      color: var(--light-accent);
+    }
+
+    .temperature-note {
+      margin-top: 0.75rem;
+    }
+
+    .temperature-controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.9rem 1rem;
+      margin-top: 1rem;
+      align-items: end;
+    }
+
+    .temperature-field label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 0.35rem;
+    }
+
+    .temperature-field select {
+      width: 100%;
+      border: 1px solid rgba(141, 110, 99, 0.22);
+      border-radius: 8px;
+      padding: 0.65rem 0.75rem;
+      font: inherit;
+      color: var(--espresso);
+      background: var(--cream-light);
+    }
+
+    .temperature-estimate {
+      margin-top: 1rem;
+      padding: 0.85rem 1rem;
+      border-radius: 10px;
+      background: var(--cream);
+      color: var(--espresso);
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    .temperature-estimate strong {
+      color: var(--dark-brown);
+    }
+
+    .temperature-timeline {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.5rem 0.75rem;
+      list-style: none;
+      padding: 0;
+      margin: 0.9rem 0 0;
+    }
+
+    .temperature-timeline li {
+      padding: 0.55rem 0.7rem;
+      border-radius: 8px;
+      background: rgba(188, 170, 164, 0.14);
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+
     /* Table Section */
     .table-section {
       background: var(--white);
@@ -1295,7 +1383,7 @@
         padding: 1rem 0.75rem 1.5rem;
       }
 
-      .brew-steps, .slider-section {
+      .brew-steps, .slider-section, .temperature-section {
         padding: 1rem 1.15rem;
       }
 
@@ -1491,6 +1579,7 @@
       .brew-steps,
       .brew-intro,
       .slider-section,
+      .temperature-section,
       .table-section,
       .faq-item,
       .favorites-section {
@@ -1536,7 +1625,7 @@
           <li>Weigh everything on an <strong>accurate scale</strong> (0.1 g resolution, with a timer).</li>
           <li><strong>Fold the paper filter</strong> along its seam and place it in the dripper.</li>
           <li><strong>Rinse the filter and preheat the decanter</strong>: pour hot water through the paper until the decanter fills up a bit, then discard that water. This removes the paper taste and warms everything up.</li>
-          <li>Grind your coffee <strong>medium-coarse</strong> and use water <strong>just off the boil</strong> (~95 °C).</li>
+          <li>Grind your coffee <strong>medium-coarse</strong> and use water <strong>just off the boil</strong> (~95 °C). No temperature kettle? Use the boil-based estimator below.</li>
         </ol>
         <p>Then tap a row in the recipe table below to load the brew steps and start your timer.</p>
       </div>
@@ -1624,6 +1713,36 @@
         </div>
         <button type="button" class="btn-reset-ratio hidden" id="btnResetRatio">Reset to 1:16.7</button>
       </div>
+    </section>
+
+    <section class="temperature-section" aria-labelledby="temperatureEstimatorTitle">
+      <h2 id="temperatureEstimatorTitle">Boil-Based Temperature Estimator</h2>
+      <p class="temperature-hint">Using a stovetop or non-temperature kettle? Bring the water to a full boil, pick your kettle fill and target brew temperature, then wait the suggested time before you pour.</p>
+      <div class="temperature-controls">
+        <div class="temperature-field">
+          <label for="temperatureEstimatorVolume">Kettle fill</label>
+          <select id="temperatureEstimatorVolume">
+            <option value="300">300 ml</option>
+            <option value="500" selected>500 ml</option>
+            <option value="1000">1 L</option>
+          </select>
+        </div>
+        <div class="temperature-field">
+          <label for="temperatureEstimatorTarget">Target brew temperature</label>
+          <select id="temperatureEstimatorTarget">
+            <option value="90">90 °C</option>
+            <option value="91">91 °C</option>
+            <option value="92">92 °C</option>
+            <option value="93">93 °C</option>
+            <option value="94" selected>94 °C</option>
+            <option value="95">95 °C</option>
+            <option value="96">96 °C</option>
+          </select>
+        </div>
+      </div>
+      <div class="temperature-estimate" id="temperatureEstimatorResult" aria-live="polite"></div>
+      <ul class="temperature-timeline" id="temperatureEstimatorTimeline"></ul>
+      <p class="temperature-note">Approximate guide for a stainless steel gooseneck kettle in a typical room. A colder kitchen usually needs a little more wait time; a warmer room usually cools a little faster.</p>
     </section>
 
     <section class="table-section">
@@ -1791,6 +1910,10 @@
     const ratioDisplay = document.getElementById('ratioDisplay');
     const tableBody = document.getElementById('recipeTableBody');
     const btnResetRatio = document.getElementById('btnResetRatio');
+    const temperatureEstimatorVolume = document.getElementById('temperatureEstimatorVolume');
+    const temperatureEstimatorTarget = document.getElementById('temperatureEstimatorTarget');
+    const temperatureEstimatorResult = document.getElementById('temperatureEstimatorResult');
+    const temperatureEstimatorTimeline = document.getElementById('temperatureEstimatorTimeline');
 
     const stepsGrid = document.getElementById('stepsGrid');
     const noRecipeNotice = document.getElementById('noRecipeNotice');
@@ -1799,6 +1922,32 @@
     const btnShareRecipe = document.getElementById('btnShareRecipe');
     const favoritesSection = document.getElementById('favoritesSection');
     const favoritesList = document.getElementById('favoritesList');
+
+    const BOIL_ESTIMATOR_PROFILES = {
+      300: [
+        { seconds: 0, temp: 100 },
+        { seconds: 30, temp: 96 },
+        { seconds: 45, temp: 94 },
+        { seconds: 75, temp: 92 },
+        { seconds: 105, temp: 90 }
+      ],
+      500: [
+        { seconds: 0, temp: 100 },
+        { seconds: 30, temp: 97 },
+        { seconds: 60, temp: 94 },
+        { seconds: 90, temp: 93 },
+        { seconds: 120, temp: 91 },
+        { seconds: 150, temp: 90 }
+      ],
+      1000: [
+        { seconds: 0, temp: 100 },
+        { seconds: 45, temp: 98 },
+        { seconds: 90, temp: 95 },
+        { seconds: 120, temp: 94 },
+        { seconds: 150, temp: 93 },
+        { seconds: 210, temp: 90 }
+      ]
+    };
 
     // --- HTML escaping helper ---
     function escapeHtml(str) {
@@ -2652,6 +2801,58 @@
       return m + ':' + String(s).padStart(2, '0');
     }
 
+    function formatWaitTime(seconds) {
+      if (seconds < 90) {
+        return `~${seconds} seconds`;
+      }
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      if (remainingSeconds === 0) {
+        return `~${minutes} minute${minutes === 1 ? '' : 's'}`;
+      }
+      return `~${minutes} min ${remainingSeconds} sec`;
+    }
+
+    function estimateWaitTime(profile, targetTemp) {
+      if (!Array.isArray(profile) || profile.length === 0) {
+        return 0;
+      }
+      if (targetTemp >= profile[0].temp) {
+        return profile[0].seconds;
+      }
+
+      for (let i = 1; i < profile.length; i++) {
+        const previous = profile[i - 1];
+        const current = profile[i];
+        if (targetTemp <= previous.temp && targetTemp >= current.temp) {
+          if (previous.temp === current.temp) {
+            return current.seconds;
+          }
+          const progress = (previous.temp - targetTemp) / (previous.temp - current.temp);
+          return Math.round(previous.seconds + progress * (current.seconds - previous.seconds));
+        }
+      }
+
+      return profile[profile.length - 1].seconds;
+    }
+
+    function renderTemperatureEstimator() {
+      if (!temperatureEstimatorVolume || !temperatureEstimatorTarget || !temperatureEstimatorResult || !temperatureEstimatorTimeline) {
+        return;
+      }
+
+      const volume = parseInt(temperatureEstimatorVolume.value, 10);
+      const targetTemp = parseInt(temperatureEstimatorTarget.value, 10);
+      const profile = BOIL_ESTIMATOR_PROFILES[volume] || BOIL_ESTIMATOR_PROFILES[500];
+      const waitSeconds = estimateWaitTime(profile, targetTemp);
+      const volumeLabel = volume === 1000 ? '1 L' : `${volume} ml`;
+
+      temperatureEstimatorResult.innerHTML = `Bring the water to a <strong>full boil</strong>, then wait <strong>${formatWaitTime(waitSeconds)}</strong> for about <strong>${targetTemp} °C</strong> using the <strong>${volumeLabel}</strong> profile.`;
+      temperatureEstimatorTimeline.innerHTML = profile
+        .map(point => `<li>${point.seconds}s → ~${point.temp} °C</li>`)
+        .join('');
+    }
+
     // --- Notification support ---
     let notificationPermission = 'default';
 
@@ -2951,6 +3152,8 @@
     // --- Slider events ---
     slider.addEventListener('input', handleSliderInput);
     btnResetRatio.addEventListener('click', resetRatio);
+    temperatureEstimatorVolume.addEventListener('change', renderTemperatureEstimator);
+    temperatureEstimatorTarget.addEventListener('change', renderTemperatureEstimator);
 
     // --- Share button ---
     async function shareCurrentRecipe() {
@@ -2993,6 +3196,7 @@
 
     // --- Init ---
     applyUrlParams();
+    renderTemperatureEstimator();
     renderFavorites();
 
     // Restore last brew from localStorage (only if URL params didn't already select a recipe)
