@@ -1,111 +1,57 @@
-name: Deploy to GitHub Pages
+---
+name: Pages
 
 on:
   push:
     branches:
       - main
-      - 'renovate/**'
     paths-ignore:
-      - '**.md'
+      - "**.md"
   pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - closed
     paths-ignore:
-      - '**.md'
+      - "**.md"
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
 
 jobs:
-  test:
-    name: Run Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: '24'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run unit tests
-        run: npm run test:unit
-
-      - name: Run HTML validation tests
-        run: npm run test:html
-
-      - name: Run accessibility tests
-        run: npm run test:a11y
-
-      - name: Install Playwright WebKit browser
-        run: npx playwright install webkit --with-deps
-
-      - name: Run iOS / WebKit end-to-end tests
-        run: npm run test:e2e
-
-  deploy:
-    needs: test
-    if: github.ref == 'refs/heads/main'
-    timeout-minutes: 5
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
-      - name: Setup Pages
-        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
-
-      - name: Auto-update service worker cache version
-        # Replace the hard-coded CACHE_NAME version in sw.js with the commit SHA
-        # so every deployed version busts the cache automatically. This avoids
-        # having to remember to bump the version manually on each change.
-        run: |
-          set -euo pipefail
-          VERSION="sha-${GITHUB_SHA::7}"
-          echo "Setting service worker CACHE_NAME to v60-brew-guide-${VERSION}"
-          sed -i -E "s|const CACHE_NAME = 'v60-brew-guide-[^']+';|const CACHE_NAME = 'v60-brew-guide-${VERSION}';|" sw.js
-          grep "const CACHE_NAME" sw.js
-
-      - name: Auto-update footer commit SHA
-        # Replace the placeholder "dev" text and link with the actual short
-        # commit SHA and a direct link to that commit on GitHub.
-        run: |
-          set -euo pipefail
-          SHORT_SHA="${GITHUB_SHA::7}"
-          echo "Setting footer commit SHA to ${SHORT_SHA}"
-          sed -i "s|github.com/DevSecNinja/v60-brew-guide/commits\"|github.com/DevSecNinja/v60-brew-guide/commit/${GITHUB_SHA}\"|" index.html
-          sed -i -E 's|(id="commitShaLink">)dev(</a>)|\1'"${SHORT_SHA}"'\2|' index.html
-          grep 'id="commitShaLink"' index.html
-
-      - name: Auto-update sitemap lastmod date
-        # Replace the hard-coded lastmod date in sitemap.xml with today's date
-        # so search engines always see the actual deployment date.
-        run: |
-          set -euo pipefail
-          TODAY="$(date -u +%Y-%m-%d)"
-          echo "Setting sitemap lastmod to ${TODAY}"
-          sed -i -E "s|<lastmod>[0-9]{4}-[0-9]{2}-[0-9]{2}</lastmod>|<lastmod>${TODAY}</lastmod>|" sitemap.xml
-          grep "lastmod" sitemap.xml
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
-        with:
-          path: .
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
+  pages:
+    uses: DevSecNinja/.github/.github/workflows/pages.yml@27fd66740c629ea38380dcd3bf93e7bc74c54247 # v1.9.0
+    permissions:
+      contents: read
+      deployments: write
+      id-token: write
+      issues: write
+      pages: write
+      pull-requests: write
+    with:
+      # renovate: datasource=node-version depName=node
+      node-version: "24"
+      # renovate: datasource=npm depName=wrangler
+      wrangler-version: "4.107.0"
+      artifact-path: "."
+      test-setup-command: npx playwright install webkit --with-deps
+      test-command: |-
+        npm run test:unit
+        npm run test:html
+        npm run test:a11y
+        npm run test:e2e
+      update-sitemap-lastmod: true
+      # Optional Cloudflare production instead of GitHub Pages:
+      # github-pages: false
+      # cloudflare-production: true
+      # cloudflare-project-name: "my-site"
+      # Optional: deploy every main commit to an acceptance environment and
+      # reserve production for releases. Also add the release trigger to `on:`
+      # above, e.g. `release: { types: [published] }`.
+      # cloudflare-acceptance: true
+      # cloudflare-production-on-release: true
+    secrets:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
