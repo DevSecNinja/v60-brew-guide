@@ -62,13 +62,46 @@ jobs:
           grep 'id="commitShaLink"' index.html
 
       - name: Ensure Cloudflare Pages project exists
-        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
-        continue-on-error: true
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: '3'
-          command: pages project create v60-brew-guide --production-branch main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PROJECT_NAME: v60-brew-guide
+        run: |
+          set -euo pipefail
+
+          API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects"
+
+          # Check whether the project already exists. Doing this explicitly (rather
+          # than blindly running `pages project create`) avoids the noisy
+          # "A project with this name already exists" error that would otherwise be
+          # surfaced as a failed-action annotation on every run.
+          HTTP_CODE=$(curl -s -o /tmp/cf_project.json -w "%{http_code}" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "$API/$PROJECT_NAME")
+
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "Cloudflare Pages project '$PROJECT_NAME' already exists"
+            exit 0
+          fi
+
+          if [ "$HTTP_CODE" != "404" ]; then
+            echo "::error::Unexpected response while checking for project (HTTP $HTTP_CODE):"
+            cat /tmp/cf_project.json
+            exit 1
+          fi
+
+          echo "Creating Cloudflare Pages project '$PROJECT_NAME'"
+          CREATE_CODE=$(curl -s -o /tmp/cf_create.json -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data "{\"name\":\"$PROJECT_NAME\",\"production_branch\":\"main\"}" \
+            "$API")
+          if [ "$CREATE_CODE" -lt 200 ] || [ "$CREATE_CODE" -ge 300 ]; then
+            echo "::error::Failed to create project (HTTP $CREATE_CODE):"
+            cat /tmp/cf_create.json
+            exit 1
+          fi
+          echo "Project created"
 
       - name: Deploy to Cloudflare Pages
         id: deploy
@@ -77,10 +110,14 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: '3'
+          # --commit-dirty=true silences the "working directory has uncommitted
+          # changes" warning: the workflow intentionally rewrites sw.js/index.html
+          # (cache version + commit SHA) before deploying.
           command: >
             pages deploy .
             --project-name=v60-brew-guide
             --branch=${{ github.head_ref }}
+            --commit-dirty=true
 
       - name: Post or update PR comment
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
