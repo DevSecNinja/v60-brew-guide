@@ -34,7 +34,7 @@ jobs:
       # renovate: datasource=node-version depName=node
       node-version: "24"
       # renovate: datasource=npm depName=wrangler
-      wrangler-version: "4.111.0"
+      wrangler-version: "4.112.0"
       artifact-path: "."
       test-setup-command: npx playwright install webkit --with-deps
       test-command: |-
