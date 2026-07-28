@@ -71,6 +71,9 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
       // jsdom doesn't support navigator.wakeLock, so this tests the fallback
       const result = await window.requestWakeLock();
       expect(result).toBe(false);
+      const wakeLockStatus = doc.getElementById('wakeLockStatus');
+      expect(wakeLockStatus.textContent).toBe('Screen lock prevention: Off');
+      expect(wakeLockStatus.classList.contains('enabled')).toBe(false);
     });
 
     function mockMediaWakeLockSupport() {
@@ -101,12 +104,17 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
       expect(result).toBe(true);
       expect(window.HTMLMediaElement.prototype.play).toHaveBeenCalled();
       expect(doc.querySelector('video[aria-hidden="true"]')).not.toBeNull();
+      const wakeLockStatus = doc.getElementById('wakeLockStatus');
+      expect(wakeLockStatus.textContent).toBe('Screen lock prevention: On');
+      expect(wakeLockStatus.classList.contains('enabled')).toBe(true);
 
       await window.releaseWakeLock();
 
       expect(window.HTMLMediaElement.prototype.pause).toHaveBeenCalled();
       expect(stop).toHaveBeenCalled();
       expect(doc.querySelector('video[aria-hidden="true"]')).toBeNull();
+      expect(wakeLockStatus.textContent).toBe('Screen lock prevention: Off');
+      expect(wakeLockStatus.classList.contains('enabled')).toBe(false);
     });
 
     test('requestWakeLock starts media fallback when native Wake Lock request fails', async () => {

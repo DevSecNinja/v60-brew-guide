@@ -349,6 +349,18 @@
       font-weight: 500;
     }
 
+    .wake-lock-status {
+      margin-top: 0.35rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--light-accent);
+      letter-spacing: 0.01em;
+    }
+
+    .wake-lock-status.enabled {
+      color: var(--green-text);
+    }
+
     .brew-actions {
       display: flex;
       gap: 0.5rem;
@@ -1896,6 +1908,7 @@
         <div>
           <h2>Brew Steps</h2>
           <div class="brew-selected-recipe" id="brewRecipeLabel">Select a recipe from the table below</div>
+          <div class="wake-lock-status" id="wakeLockStatus" aria-live="polite">Screen lock prevention: Off</div>
         </div>
         <div class="brew-actions">
           <button type="button" class="btn-reset-brew" id="btnShareRecipe" title="Share this recipe" hidden>Share</button>
@@ -2160,6 +2173,7 @@
     const stepsGrid = document.getElementById('stepsGrid');
     const noRecipeNotice = document.getElementById('noRecipeNotice');
     const brewRecipeLabel = document.getElementById('brewRecipeLabel');
+    const wakeLockStatus = document.getElementById('wakeLockStatus');
     const btnResetBrew = document.getElementById('btnResetBrew');
     const btnShareRecipe = document.getElementById('btnShareRecipe');
     const favoritesSection = document.getElementById('favoritesSection');
@@ -2629,6 +2643,21 @@
     // Refresh every 30s: frequent enough for iOS to keep hidden media active, but low battery cost.
     const MEDIA_WAKE_LOCK_REFRESH_INTERVAL_MS = 30000;
 
+    function isWakeLockActive() {
+      return wakeLock !== null || mediaWakeLock !== null;
+    }
+
+    function renderWakeLockStatus() {
+      if (!wakeLockStatus) {
+        return;
+      }
+      const enabled = isWakeLockActive();
+      wakeLockStatus.textContent = enabled
+        ? 'Screen lock prevention: On'
+        : 'Screen lock prevention: Off';
+      wakeLockStatus.classList.toggle('enabled', enabled);
+    }
+
     async function requestMediaWakeLock() {
       if (mediaWakeLock !== null) {
         return true;
@@ -2673,6 +2702,7 @@
 
       try {
         await video.play();
+        renderWakeLockStatus();
         return true;
       } catch (error) {
         releaseMediaWakeLock();
@@ -2695,6 +2725,7 @@
       }
       currentMediaWakeLock.stream.getTracks().forEach(track => track.stop());
       currentMediaWakeLock.video.remove();
+      renderWakeLockStatus();
     }
 
     // Request wake lock to keep screen on during brewing.
@@ -2739,6 +2770,7 @@
         try {
           const currentWakeLock = await navigator.wakeLock.request('screen');
           wakeLock = currentWakeLock;
+          renderWakeLockStatus();
           // Native succeeded; we can drop the media fallback we pre-armed.
           releaseMediaWakeLock();
 
@@ -2747,6 +2779,7 @@
             // Only clear the global if it still refers to this sentinel
             if (wakeLock === currentWakeLock) {
               wakeLock = null;
+              renderWakeLockStatus();
             }
           });
 
@@ -2775,6 +2808,7 @@
       if (currentWakeLock !== null) {
         // Clear shared reference before awaiting release to avoid races
         wakeLock = null;
+        renderWakeLockStatus();
         try {
           await currentWakeLock.release();
         } catch (error) {
@@ -3609,6 +3643,7 @@
     // --- Init ---
     applyUrlParams();
     restoreTemperatureEstimatorState();
+    renderWakeLockStatus();
     renderTemperatureEstimator();
     renderFavorites();
 
