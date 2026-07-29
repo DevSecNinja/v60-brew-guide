@@ -21,7 +21,6 @@ The V60 Recipe Calculator is a single-file static web application (`index.html`)
 │   └── favicon.ico                 # Multi-size favicon (16×16, 32×32)
 ├── playwright.config.js            # Playwright config (WebKit / iPhone 14 e2e tests)
 ├── .github/workflows/pages.yml     # GitHub Pages deployment workflow
-├── .github/workflows/preview.yml   # Cloudflare Pages PR preview deployment workflow
 ├── README.md                       # Project documentation
 ├── ARCHITECTURE.md                 # This file
 ├── PROMPT.md                       # Original build prompt
@@ -32,7 +31,7 @@ The V60 Recipe Calculator is a single-file static web application (`index.html`)
 
 Everything lives in one `index.html` with inline `<style>` and `<script>` blocks. This is intentional:
 
-- **Zero build step** — no bundler, no npm, no framework. The file is the app.
+- **Zero build step** — no bundler and no framework. The file is the app.
 - **Deploy and forget** — push to `main` and GitHub Pages serves it. No CI artifacts, no build cache, no dependency updates.
 - **Instant load** — one HTTP request for the document, one for the font. No JS bundle to parse.
 - **Portable** — can be opened directly from the filesystem (`file://`) for offline use.
@@ -126,18 +125,11 @@ The GitHub Actions workflow (`.github/workflows/pages.yml`) deploys on every pus
 
 No build command is needed — the static files are served as-is.
 
-### PR Previews (Cloudflare Pages)
+### PR Previews
 
-The workflow `.github/workflows/preview.yml` deploys a preview of each pull request
-to Cloudflare Pages. It runs on `pull_request` events (opened, synchronize, reopened,
-closed) and:
-
-1. Skips fork PRs (Cloudflare secrets are not available)
-2. Validates that `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets are set
-3. Applies the same service-worker cache-version and footer-SHA updates as production
-4. Deploys to Cloudflare Pages using `wrangler pages deploy` with the PR branch name
-5. Posts (or updates) a PR comment with the preview URL
-6. Deletes the preview deployment when the PR is closed
+The Pages workflow also runs on pull requests (opened, synchronize, reopened,
+closed) and delegates to the shared reusable Pages workflow with the repository
+root as the deployment artifact. Markdown-only changes are ignored.
 
 ## Progressive Web App (PWA)
 
@@ -148,16 +140,55 @@ The app is installable as a PWA for offline use, particularly useful for brewing
 | File | Purpose |
 |------|---------|
 | `manifest.json` | Declares app name, icons, theme color, display mode (`standalone`), and start URL |
-| `sw.js` | Service worker that caches all app assets and Google Fonts for offline use |
+| `sw.js` | Service worker that keeps HTML/update metadata fresh while caching the app shell and fonts for offline use |
 | `icons/` | PNG icons at 192×192 and 512×512, plus maskable variants and an Apple touch icon |
 
 ### Caching Strategy
 
-The service worker uses a **cache-first** strategy:
+The service worker uses different strategies by request type:
 
-1. **Install** — Pre-caches `index.html`, `manifest.json`, and icons.
-2. **Fetch** — Serves cached assets first; falls back to network and caches new responses (including Google Fonts CSS and font files).
-3. **Activate** — Cleans up old cache versions when a new service worker is deployed.
+1. **Install** — Opens the current `CACHE_NAME` and caches each core app-shell
+   asset (`./`, `index.html`, `manifest.json`, and required icons)
+   individually. A single failed asset is logged but does not abort the whole
+   install.
+2. **Navigation / HTML** — Same-origin document requests are **network-first**.
+   Successful `200` responses are cached. If the network fails, the service
+   worker falls back to the cached request, then `./index.html`, then `./`, and
+   finally a `503 Offline` response.
+3. **Update resources** — Same-origin `sw.js` and `manifest.json` are
+   **network-first** with cached fallback so update metadata does not stay stale.
+4. **Google Fonts** — Google Fonts CSS and font files are **cache-first** with
+   network fallback. Only successful `200` responses are stored.
+5. **Static assets** — Other same-origin static assets are
+   **stale-while-revalidate**: a cached response is returned immediately, while
+   a successful network refresh updates the cache for the next load.
+6. **Everything else** — Cross-origin requests other than Google Fonts, and all
+   non-`GET` requests, are network-only.
+7. **Activate** — Deletes cache buckets whose name does not match the current
+   `CACHE_NAME`, then calls `clients.claim()` so open pages are controlled by
+   the activated worker.
+
+### Service Worker Update Lifecycle
+
+`index.html` registers `sw.js` with `updateViaCache: 'none'`, then checks for
+updates through a throttled `checkForSwUpdate()` helper. The helper calls
+`registration.update()` at most once per 60 seconds and is invoked on initial
+registration, hourly, when the page becomes visible, on `pageshow`, and when the
+browser comes back online. These extra triggers matter for installed iOS PWAs,
+which are often frozen and restored instead of fully reloaded.
+
+If registration finds an already-waiting worker, the page posts
+`{ type: 'SKIP_WAITING' }` immediately. For newly detected updates,
+`updatefound` watches the installing worker; when it reaches `installed` while
+an existing controller is present, the page sends the same `SKIP_WAITING`
+message. The worker handles that message with `self.skipWaiting()`, then the
+activate handler clears old caches and claims clients.
+
+The page listens for `controllerchange` after activation and reloads so the new
+HTML and JavaScript are running. Because brew timer state is in memory, the
+reload is deferred while a brew timer or temperature-prep timer is visibly
+running. A deferred reload is retried when the brew completes or the page is
+backgrounded.
 
 ### iOS (iPhone/iPad) Support
 
@@ -180,8 +211,11 @@ behaviour:
 npm run test:pwa
 ```
 
-The suite ([`tests/pwa/ios-pwa.test.js`](tests/pwa/ios-pwa.test.js))
-validates:
+The static PWA tests include
+[`tests/pwa/ios-pwa.test.js`](tests/pwa/ios-pwa.test.js) for the iOS install
+contract and
+[`tests/pwa/sw-cache-strategy.test.js`](tests/pwa/sw-cache-strategy.test.js)
+for the service-worker caching behaviour. Together they validate:
 
 - Apple-specific meta tags (`apple-mobile-web-app-capable`,
   `apple-mobile-web-app-status-bar-style`, `apple-mobile-web-app-title`)
@@ -196,6 +230,9 @@ validates:
 - Service worker pre-cache, `SKIP_WAITING` + `clients.claim()` update
   flow (important on iOS, where a waiting worker often never activates
   until the app is force-quit)
+- Service worker fetch strategy: navigation/HTML is network-first, same-origin
+  static assets are stale-while-revalidate, and offline fallbacks do not
+  overwrite cached successful responses
 
 When making changes, run `npm run test:pwa` to catch regressions
 that would break the home-screen install, offline launch, or
@@ -227,18 +264,16 @@ uses the `iPhone 14` device preset and spins up a local static-file server
 
 ### Cache Versioning
 
-The cache name includes a version string (e.g. `v60-brew-guide-v1.16.0` for local
-development, `v60-brew-guide-sha-<short-sha>` in production). The value in
-`sw.js` (`const CACHE_NAME = 'v60-brew-guide-...'`) serves as a fallback for
-local use; the GitHub Pages deploy workflow automatically rewrites it to
-`v60-brew-guide-sha-${GITHUB_SHA::7}` at build time via a `sed` step in
-[`.github/workflows/pages.yml`](.github/workflows/pages.yml). This means every
-push to `main` ships with a unique cache name, so the `activate` handler
-reliably deletes the previous cache and users always pick up the latest
-`index.html`/`sw.js` without needing a manual version bump.
+`CACHE_NAME` in `sw.js` is a semver-shaped cache-schema version, not a
+per-release asset version. Bump it only when the cache layout or contents
+scheme changes, such as changing cache keys, buckets, or the app-shell caching
+model.
 
-If you need to bust the cache during local development or in a non-Pages
-environment, bump the fallback version string in `sw.js` manually.
+Normal deployed asset changes do not require a `CACHE_NAME` bump.
+Navigation/HTML and `manifest.json` are network-first, so fresh app code and
+update metadata are preferred whenever the network is available. Other
+same-origin static assets are stale-while-revalidate, so an outdated cached
+asset is refreshed in the background and self-heals on the next load.
 
 ## Design Trade-offs
 

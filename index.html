@@ -2829,6 +2829,20 @@
         stepStates.every(s => s === 'completed');
     }
 
+    function isBrewTimerRunning() {
+      return isBrewRunning() || temperaturePrepState === 'running';
+    }
+
+    function reloadForServiceWorkerUpdate() {
+      if (isBrewTimerRunning()) {
+        console.log('New service worker activated; brew timer is running, skipping reload.');
+        return;
+      }
+
+      console.log('New service worker activated, reloading...');
+      window.location.reload();
+    }
+
     // Re-acquire only during active brews; selected-but-not-started recipes are idle, and off-gesture
     // idle visibility events can block the next user-tap request on iOS.
     document.addEventListener('visibilitychange', async () => {
@@ -3418,6 +3432,7 @@
       brewCompleteTimers.push(setTimeout(() => {
         releaseWakeLock();
       }, WAKE_LOCK_RELEASE_DELAY_MS));
+
     }
 
     function clearBrewCompleteTimers() {
@@ -3718,9 +3733,10 @@
       // Handle controller change (new SW activated)
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (refreshing) return;
-        refreshing = true;
-        console.log('New service worker activated, reloading...');
-        window.location.reload();
+        if (!isBrewTimerRunning()) {
+          refreshing = true;
+        }
+        reloadForServiceWorkerUpdate();
       });
 
       navigator.serviceWorker.register('sw.js', {
@@ -3729,13 +3745,42 @@
       }).then((reg) => {
         console.log('Service Worker registered, scope:', reg.scope);
 
+        const SW_UPDATE_THROTTLE_MS = 60000;
+        let lastSwUpdateCheck = 0;
+
+        const checkForSwUpdate = () => {
+          const now = Date.now();
+          if (now - lastSwUpdateCheck < SW_UPDATE_THROTTLE_MS) return;
+          lastSwUpdateCheck = now;
+          Promise.resolve()
+            .then(() => reg.update())
+            .catch((err) => {
+              console.warn('Service Worker update check failed:', err);
+            });
+        };
+
+        if (reg.waiting) {
+          console.log('Waiting service worker found, activating...');
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+
         // Check for updates on page load (important for iOS)
-        reg.update();
+        checkForSwUpdate();
 
         // Check for updates every hour for long-running sessions
-        setInterval(() => {
-          reg.update();
-        }, 3600000);
+        setInterval(checkForSwUpdate, 3600000);
+
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') {
+            checkForSwUpdate();
+          }
+        });
+        window.addEventListener('pageshow', () => {
+          checkForSwUpdate();
+        });
+        window.addEventListener('online', () => {
+          checkForSwUpdate();
+        });
 
         // Listen for updates
         reg.addEventListener('updatefound', () => {
