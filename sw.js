@@ -1,5 +1,5 @@
 // V60 Recipe Calculator - Service Worker
-const CACHE_NAME = 'v60-brew-guide-v1.18.0';
+const CACHE_NAME = 'v60-brew-guide-v1.19.0';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -29,7 +29,13 @@ self.addEventListener('install', (event) => {
   console.log('[SW] Installing new service worker, version:', CACHE_NAME);
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      return Promise.all(
+        ASSETS_TO_CACHE.map((asset) => {
+          return cache.add(asset).catch((error) => {
+            console.log('[SW] Failed to cache asset:', asset, error);
+          });
+        })
+      );
     })
   );
   // Don't activate immediately - wait for message from client
@@ -57,9 +63,87 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch: serve from cache, fall back to network, cache new responses
+function isSameOriginRequest(request) {
+  return new URL(request.url).origin === self.location.origin;
+}
+
+function isSuccessfulResponse(response) {
+  return response && response.ok && response.status === 200;
+}
+
+function isHtmlRequest(request) {
+  const accept = request.headers.get('accept') || '';
+  return (
+    request.mode === 'navigate' ||
+    request.destination === 'document' ||
+    accept.indexOf('text/html') !== -1
+  );
+}
+
+function isUpdateResource(request) {
+  const url = new URL(request.url);
+  return (
+    isSameOriginRequest(request) &&
+    (url.pathname.endsWith('/sw.js') || url.pathname.endsWith('/manifest.json'))
+  );
+}
+
+function cacheResponse(request, response) {
+  if (!isSuccessfulResponse(response)) {
+    return Promise.resolve();
+  }
+
+  const clone = response.clone();
+  return caches.open(CACHE_NAME).then((cache) => {
+    return cache.put(request, clone);
+  }).catch((error) => {
+    console.log('[SW] Failed to cache response:', request.url, error);
+  });
+}
+
+function cachedIndexFallback() {
+  return caches.match('./index.html').then((cachedIndex) => {
+    if (cachedIndex) return cachedIndex;
+    return caches.match('./');
+  });
+}
+
+function networkFirst(request, fallbackToIndex) {
+  return fetch(request).then((response) => {
+    return cacheResponse(request, response).then(() => response);
+  }).catch(() => {
+    return caches.match(request).then((cached) => {
+      if (cached) return cached;
+      if (fallbackToIndex) return cachedIndexFallback();
+      return undefined;
+    });
+  }).then((response) => {
+    if (response) return response;
+    return new Response('Offline', {
+      status: 503,
+      statusText: 'Service Unavailable'
+    });
+  });
+}
+
+function cacheFirst(request) {
+  return caches.match(request).then((cached) => {
+    if (cached) return cached;
+    return fetch(request).then((response) => {
+      return cacheResponse(request, response).then(() => response);
+    });
+  });
+}
+
+// Fetch: keep HTML and update metadata fresh, cache static assets for offline use
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+  const sameOrigin = isSameOriginRequest(request);
+
+  if (request.method !== 'GET') {
+    event.respondWith(fetch(request));
+    return;
+  }
 
   // For Google Fonts: cache-first with network fallback
   if (
@@ -70,36 +154,32 @@ self.addEventListener('fetch', (event) => {
       caches.match(request).then((cached) => {
         if (cached) return cached;
         return fetch(request).then((response) => {
-          // Clone and cache the font response
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          return response;
+          return cacheResponse(request, response).then(() => response);
         });
       })
     );
     return;
   }
 
-  // For same-origin requests: cache-first, network fallback
-  if (request.url.startsWith(self.location.origin)) {
-    event.respondWith(
-      caches.match(request).then((cached) => {
-        if (cached) return cached;
-        return fetch(request).then((response) => {
-          // Only cache successful responses
-          if (response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        });
-      })
-    );
+  if (!sameOrigin) {
+    event.respondWith(fetch(request));
     return;
   }
 
-  // All other requests: network only
-  event.respondWith(fetch(request));
+  // For navigation/HTML: network-first, offline fallback to cached app shell
+  if (isHtmlRequest(request)) {
+    event.respondWith(networkFirst(request, true));
+    return;
+  }
+
+  // For update-gating resources: network-first with cached fallback
+  if (isUpdateResource(request)) {
+    event.respondWith(networkFirst(request, false));
+    return;
+  }
+
+  // For same-origin static assets: cache-first with network fallback
+  event.respondWith(cacheFirst(request));
 });
 
 // Handle notification click - open the app

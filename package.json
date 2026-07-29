@@ -9,7 +9,8 @@
     "test:html": "jest --verbose --testPathPatterns=tests/html-validation",
     "test:a11y": "jest --verbose --testPathPatterns=tests/accessibility",
     "test:pwa": "jest --verbose --testPathPatterns=tests/pwa",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "check:sw-version": "node scripts/check-sw-version.js"
   },
   "devDependencies": {
     "@playwright/test": "1.61.1",

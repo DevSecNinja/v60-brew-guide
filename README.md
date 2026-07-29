@@ -16,12 +16,16 @@ A simple, static V60 pour-over coffee brew guide based on [James Hoffmann's Ulti
 
 ## Tech
 
-- **Zero dependencies** — a single `index.html` file with inline CSS and JavaScript
+- **Zero runtime dependencies** — a single `index.html` file with inline CSS and JavaScript
 - Hosted via GitHub Pages with automated deployment
-- No frameworks, no build tools, no npm — deploy and forget
+- No frameworks and no build step — static files are served as-is
 
 ## Gotchas
 
+- **Bump the service worker cache version for deployed asset changes.**
+  If `index.html`, `manifest.json`, `icons/`, or other client-served HTML/CSS/JS
+  changes, increase `CACHE_NAME` in `sw.js` so installed PWAs detect the update.
+  Run `npm run check:sw-version` to check this locally.
 - **iOS PWA wake lock requires a user gesture.** The Screen Wake Lock API
   cannot be granted on iOS / iPadOS standalone PWAs without an explicit user
   interaction (tap, scroll, keypress). The app therefore acquires the lock

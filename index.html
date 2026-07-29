@@ -2614,6 +2614,7 @@
     let stepRemaining = []; // remaining seconds (countdown)
     let wakeLock = null; // WakeLock sentinel to keep screen on during brew
     let brewCompleteTimers = []; // timers for post-brew-complete actions
+    let pendingServiceWorkerReload = false;
     let countdownTimer = null; // setInterval ID for the 3-2-1 pre-start countdown
     let countdownCount = 0;    // current countdown number displayed (3, 2, or 1)
     let temperaturePrepState = 'hidden'; // 'hidden' | 'available' | 'running' | 'completed'
@@ -2827,6 +2828,27 @@
       return selectedRecipe !== null &&
         stepStates.length === STEP_COUNT &&
         stepStates.every(s => s === 'completed');
+    }
+
+    function isBrewTimerRunning() {
+      return isBrewRunning() || temperaturePrepState === 'running';
+    }
+
+    function reloadForServiceWorkerUpdate() {
+      if (isBrewTimerRunning()) {
+        pendingServiceWorkerReload = true;
+        console.log('New service worker activated; deferring reload until brew timer stops.');
+        return;
+      }
+
+      pendingServiceWorkerReload = false;
+      console.log('New service worker activated, reloading...');
+      window.location.reload();
+    }
+
+    function reloadPendingServiceWorkerUpdate() {
+      if (!pendingServiceWorkerReload) return;
+      reloadForServiceWorkerUpdate();
     }
 
     // Re-acquire only during active brews; selected-but-not-started recipes are idle, and off-gesture
@@ -3418,6 +3440,8 @@
       brewCompleteTimers.push(setTimeout(() => {
         releaseWakeLock();
       }, WAKE_LOCK_RELEASE_DELAY_MS));
+
+      reloadPendingServiceWorkerUpdate();
     }
 
     function clearBrewCompleteTimers() {
@@ -3572,6 +3596,7 @@
     btnResetBrew.addEventListener('click', () => {
       if (selectedRecipe) {
         resetBrewState();
+        reloadPendingServiceWorkerUpdate();
       }
     });
 
@@ -3580,6 +3605,7 @@
       if (selectedRecipe) {
         resetBrewState();
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        reloadPendingServiceWorkerUpdate();
       }
     });
 
@@ -3719,8 +3745,7 @@
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (refreshing) return;
         refreshing = true;
-        console.log('New service worker activated, reloading...');
-        window.location.reload();
+        reloadForServiceWorkerUpdate();
       });
 
       navigator.serviceWorker.register('sw.js', {
@@ -3729,13 +3754,42 @@
       }).then((reg) => {
         console.log('Service Worker registered, scope:', reg.scope);
 
+        const SW_UPDATE_THROTTLE_MS = 60000;
+        let lastSwUpdateCheck = 0;
+
+        const checkForSwUpdate = () => {
+          const now = Date.now();
+          if (now - lastSwUpdateCheck < SW_UPDATE_THROTTLE_MS) return;
+          lastSwUpdateCheck = now;
+          Promise.resolve()
+            .then(() => reg.update())
+            .catch((err) => {
+              console.warn('Service Worker update check failed:', err);
+            });
+        };
+
+        if (reg.waiting) {
+          console.log('Waiting service worker found, activating...');
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+
         // Check for updates on page load (important for iOS)
-        reg.update();
+        checkForSwUpdate();
 
         // Check for updates every hour for long-running sessions
-        setInterval(() => {
-          reg.update();
-        }, 3600000);
+        setInterval(checkForSwUpdate, 3600000);
+
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') {
+            checkForSwUpdate();
+          }
+        });
+        window.addEventListener('pageshow', () => {
+          checkForSwUpdate();
+        });
+        window.addEventListener('online', () => {
+          checkForSwUpdate();
+        });
 
         // Listen for updates
         reg.addEventListener('updatefound', () => {
