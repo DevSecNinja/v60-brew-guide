@@ -2614,7 +2614,6 @@
     let stepRemaining = []; // remaining seconds (countdown)
     let wakeLock = null; // WakeLock sentinel to keep screen on during brew
     let brewCompleteTimers = []; // timers for post-brew-complete actions
-    let pendingServiceWorkerReload = false;
     let countdownTimer = null; // setInterval ID for the 3-2-1 pre-start countdown
     let countdownCount = 0;    // current countdown number displayed (3, 2, or 1)
     let temperaturePrepState = 'hidden'; // 'hidden' | 'available' | 'running' | 'completed'
@@ -2836,19 +2835,12 @@
 
     function reloadForServiceWorkerUpdate() {
       if (isBrewTimerRunning()) {
-        pendingServiceWorkerReload = true;
-        console.log('New service worker activated; deferring reload until brew timer stops.');
+        console.log('New service worker activated; brew timer is running, skipping reload.');
         return;
       }
 
-      pendingServiceWorkerReload = false;
       console.log('New service worker activated, reloading...');
       window.location.reload();
-    }
-
-    function reloadPendingServiceWorkerUpdate() {
-      if (!pendingServiceWorkerReload) return;
-      reloadForServiceWorkerUpdate();
     }
 
     // Re-acquire only during active brews; selected-but-not-started recipes are idle, and off-gesture
@@ -3441,7 +3433,6 @@
         releaseWakeLock();
       }, WAKE_LOCK_RELEASE_DELAY_MS));
 
-      reloadPendingServiceWorkerUpdate();
     }
 
     function clearBrewCompleteTimers() {
@@ -3596,7 +3587,6 @@
     btnResetBrew.addEventListener('click', () => {
       if (selectedRecipe) {
         resetBrewState();
-        reloadPendingServiceWorkerUpdate();
       }
     });
 
@@ -3605,7 +3595,6 @@
       if (selectedRecipe) {
         resetBrewState();
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        reloadPendingServiceWorkerUpdate();
       }
     });
 
@@ -3744,7 +3733,9 @@
       // Handle controller change (new SW activated)
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (refreshing) return;
-        refreshing = true;
+        if (!isBrewTimerRunning()) {
+          refreshing = true;
+        }
         reloadForServiceWorkerUpdate();
       });
 

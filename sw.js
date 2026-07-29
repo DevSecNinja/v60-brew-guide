@@ -1,4 +1,5 @@
 // V60 Recipe Calculator - Service Worker
+// Cache schema version only; do not bump for every deployed asset change.
 const CACHE_NAME = 'v60-brew-guide-v1.19.0';
 const ASSETS_TO_CACHE = [
   './',
@@ -11,6 +12,15 @@ const ASSETS_TO_CACHE = [
   './icons/icon-maskable-192.png',
   './icons/icon-maskable-512.png'
 ];
+// The app shell must be cached for the app to work offline at all; everything
+// else may fail individually without blocking installation.
+const APP_SHELL_CACHE_KEY = './index.html';
+const MANDATORY_ASSETS_TO_CACHE = [
+  APP_SHELL_CACHE_KEY
+];
+const OPTIONAL_ASSETS_TO_CACHE = ASSETS_TO_CACHE.filter(
+  (asset) => MANDATORY_ASSETS_TO_CACHE.indexOf(asset) === -1
+);
 
 // Google Fonts to cache
 const FONT_URLS = [
@@ -29,13 +39,24 @@ self.addEventListener('install', (event) => {
   console.log('[SW] Installing new service worker, version:', CACHE_NAME);
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return Promise.all(
-        ASSETS_TO_CACHE.map((asset) => {
+      const mandatoryAssets = Promise.all(
+        MANDATORY_ASSETS_TO_CACHE.map((asset) => {
           return cache.add(asset).catch((error) => {
-            console.log('[SW] Failed to cache asset:', asset, error);
+            console.log('[SW] Failed to cache mandatory asset:', asset, error);
+            throw error;
           });
         })
       );
+
+      const optionalAssets = Promise.all(
+        OPTIONAL_ASSETS_TO_CACHE.map((asset) => {
+          return cache.add(asset).catch((error) => {
+            console.log('[SW] Failed to cache optional asset:', asset, error);
+          });
+        })
+      );
+
+      return Promise.all([mandatoryAssets, optionalAssets]);
     })
   );
   // Don't activate immediately - wait for message from client
@@ -80,43 +101,55 @@ function isHtmlRequest(request) {
   );
 }
 
-function isUpdateResource(request) {
+function isManifestRequest(request) {
   const url = new URL(request.url);
   return (
     isSameOriginRequest(request) &&
-    (url.pathname.endsWith('/sw.js') || url.pathname.endsWith('/manifest.json'))
+    url.pathname.endsWith('/manifest.json')
   );
 }
 
-function cacheResponse(request, response) {
-  if (!isSuccessfulResponse(response)) {
-    return Promise.resolve();
-  }
+function isServerErrorResponse(response) {
+  return response && response.status >= 500 && response.status < 600;
+}
 
-  const clone = response.clone();
-  return caches.open(CACHE_NAME).then((cache) => {
-    return cache.put(request, clone);
+function cacheResponse(request, response, cacheKey) {
+  const target = cacheKey || request;
+  const targetUrl = typeof target === 'string' ? target : target.url;
+
+  return Promise.resolve().then(() => {
+    if (!isSuccessfulResponse(response)) {
+      return undefined;
+    }
+
+    const clone = response.clone();
+    return caches.open(CACHE_NAME).then((cache) => {
+      return cache.put(target, clone);
+    });
   }).catch((error) => {
-    console.log('[SW] Failed to cache response:', request.url, error);
+    console.log('[SW] Failed to cache response:', targetUrl, error);
   });
 }
 
 function cachedIndexFallback() {
-  return caches.match('./index.html').then((cachedIndex) => {
-    if (cachedIndex) return cachedIndex;
-    return caches.match('./');
-  });
+  return caches.match(APP_SHELL_CACHE_KEY);
 }
 
-function networkFirst(request, fallbackToIndex) {
+function networkFirst(request, options) {
+  const strategy = options || {};
+  const cacheKey = strategy.cacheKey || request;
+  const fallbackKey = strategy.fallbackKey === undefined ? request : strategy.fallbackKey;
+
   return fetch(request).then((response) => {
-    return cacheResponse(request, response).then(() => response);
+    if (strategy.fallbackOnServerError && isServerErrorResponse(response)) {
+      throw new Error('Server error response');
+    }
+
+    return cacheResponse(request, response, cacheKey).then(() => response);
   }).catch(() => {
-    return caches.match(request).then((cached) => {
-      if (cached) return cached;
-      if (fallbackToIndex) return cachedIndexFallback();
-      return undefined;
-    });
+    if (!fallbackKey) return undefined;
+    if (fallbackKey === APP_SHELL_CACHE_KEY) return cachedIndexFallback();
+    return caches.match(fallbackKey);
   }).then((response) => {
     if (response) return response;
     return new Response('Offline', {
@@ -132,6 +165,26 @@ function cacheFirst(request) {
     return fetch(request).then((response) => {
       return cacheResponse(request, response).then(() => response);
     });
+  });
+}
+
+function fetchAndCache(request) {
+  return fetch(request).then((response) => {
+    return cacheResponse(request, response).then(() => response);
+  });
+}
+
+function staleWhileRevalidate(request, event) {
+  return caches.match(request).then((cached) => {
+    if (cached) {
+      const revalidation = fetchAndCache(request).catch((error) => {
+        console.log('[SW] Failed to revalidate cache:', request.url, error);
+      });
+      event.waitUntil(revalidation);
+      return cached;
+    }
+
+    return fetchAndCache(request);
   });
 }
 
@@ -168,18 +221,22 @@ self.addEventListener('fetch', (event) => {
 
   // For navigation/HTML: network-first, offline fallback to cached app shell
   if (isHtmlRequest(request)) {
-    event.respondWith(networkFirst(request, true));
+    event.respondWith(networkFirst(request, {
+      cacheKey: APP_SHELL_CACHE_KEY,
+      fallbackKey: APP_SHELL_CACHE_KEY,
+      fallbackOnServerError: true
+    }));
     return;
   }
 
-  // For update-gating resources: network-first with cached fallback
-  if (isUpdateResource(request)) {
-    event.respondWith(networkFirst(request, false));
+  // For app metadata: network-first with cached fallback
+  if (isManifestRequest(request)) {
+    event.respondWith(networkFirst(request));
     return;
   }
 
-  // For same-origin static assets: cache-first with network fallback
-  event.respondWith(cacheFirst(request));
+  // For same-origin static assets: stale-while-revalidate for self-healing updates
+  event.respondWith(staleWhileRevalidate(request, event));
 });
 
 // Handle notification click - open the app

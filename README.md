@@ -22,10 +22,11 @@ A simple, static V60 pour-over coffee brew guide based on [James Hoffmann's Ulti
 
 ## Gotchas
 
-- **Bump the service worker cache version for deployed asset changes.**
-  If `index.html`, `manifest.json`, `icons/`, or other client-served HTML/CSS/JS
-  changes, increase `CACHE_NAME` in `sw.js` so installed PWAs detect the update.
-  Run `npm run check:sw-version` to check this locally.
+- **Treat the service worker cache version as a cache-schema version.**
+  `CACHE_NAME` in `sw.js` only needs to change when the cache layout or
+  contents scheme changes. Normal deployed asset updates self-heal:
+  navigation/HTML and `manifest.json` are network-first, while same-origin
+  static assets are stale-while-revalidate.
 - **iOS PWA wake lock requires a user gesture.** The Screen Wake Lock API
   cannot be granted on iOS / iPadOS standalone PWAs without an explicit user
   interaction (tap, scroll, keypress). The app therefore acquires the lock

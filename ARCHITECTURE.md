@@ -19,10 +19,8 @@ The V60 Recipe Calculator is a single-file static web application (`index.html`)
 │   ├── icon-maskable-512.png       # 512×512 maskable icon
 │   ├── apple-touch-icon.png        # 180×180 Apple touch icon
 │   └── favicon.ico                 # Multi-size favicon (16×16, 32×32)
-├── scripts/check-sw-version.js     # Guard that requires cache-version bumps for deployed asset changes
 ├── playwright.config.js            # Playwright config (WebKit / iPhone 14 e2e tests)
 ├── .github/workflows/pages.yml     # GitHub Pages deployment workflow
-├── .github/workflows/sw-version-check.yml # PR guard for service-worker cache versioning
 ├── README.md                       # Project documentation
 ├── ARCHITECTURE.md                 # This file
 ├── PROMPT.md                       # Original build prompt
@@ -159,12 +157,14 @@ The service worker uses different strategies by request type:
    finally a `503 Offline` response.
 3. **Update resources** — Same-origin `sw.js` and `manifest.json` are
    **network-first** with cached fallback so update metadata does not stay stale.
-4. **Static assets** — Google Fonts and other same-origin static assets are
-   **cache-first** with network fallback. Only successful `200` responses are
-   stored.
-5. **Everything else** — Cross-origin requests other than Google Fonts, and all
+4. **Google Fonts** — Google Fonts CSS and font files are **cache-first** with
+   network fallback. Only successful `200` responses are stored.
+5. **Static assets** — Other same-origin static assets are
+   **stale-while-revalidate**: a cached response is returned immediately, while
+   a successful network refresh updates the cache for the next load.
+6. **Everything else** — Cross-origin requests other than Google Fonts, and all
    non-`GET` requests, are network-only.
-6. **Activate** — Deletes cache buckets whose name does not match the current
+7. **Activate** — Deletes cache buckets whose name does not match the current
    `CACHE_NAME`, then calls `clients.claim()` so open pages are controlled by
    the activated worker.
 
@@ -231,8 +231,8 @@ for the service-worker caching behaviour. Together they validate:
   flow (important on iOS, where a waiting worker often never activates
   until the app is force-quit)
 - Service worker fetch strategy: navigation/HTML is network-first, same-origin
-  static assets are cache-first, and offline fallbacks do not overwrite cached
-  successful responses
+  static assets are stale-while-revalidate, and offline fallbacks do not
+  overwrite cached successful responses
 
 When making changes, run `npm run test:pwa` to catch regressions
 that would break the home-screen install, offline launch, or
@@ -264,24 +264,16 @@ uses the `iPhone 14` device preset and spins up a local static-file server
 
 ### Cache Versioning
 
-`sw.js` declares a semver cache name:
+`CACHE_NAME` in `sw.js` is a semver-shaped cache-schema version, not a
+per-release asset version. Bump it only when the cache layout or contents
+scheme changes, such as changing cache keys, buckets, or the app-shell caching
+model.
 
-```js
-const CACHE_NAME = 'v60-brew-guide-v1.19.0';
-```
-
-Any change to a deployed asset must increase this value. This includes
-`index.html`, `manifest.json`, `icons/`, and other client-served HTML/CSS/JS.
-Browsers only run the service-worker update flow after they detect a changed
-`sw.js`; if cached assets change but `CACHE_NAME` does not, installed PWAs can
-keep serving old cached HTML indefinitely.
-
-The PR workflow
-[`sw-version-check.yml`](.github/workflows/sw-version-check.yml) runs
-`npm run check:sw-version` and fails when guarded assets changed without a
-strictly higher `CACHE_NAME`. For local checks, run the same command. You can
-override the comparison refs with `SW_VERSION_CHECK_BASE_REF` and
-`SW_VERSION_CHECK_HEAD_REF` when testing a branch locally.
+Normal deployed asset changes do not require a `CACHE_NAME` bump.
+Navigation/HTML and `manifest.json` are network-first, so fresh app code and
+update metadata are preferred whenever the network is available. Other
+same-origin static assets are stale-while-revalidate, so an outdated cached
+asset is refreshed in the background and self-heals on the next load.
 
 ## Design Trade-offs
 
