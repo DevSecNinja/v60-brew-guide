@@ -14,7 +14,7 @@
   "devDependencies": {
     "@playwright/test": "1.62.1",
     "axe-core": "4.13.0",
-    "html-validate": "11.6.2",
+    "html-validate": "11.8.0",
     "jest": "30.4.2",
     "jest-environment-jsdom": "30.4.1"
   }
