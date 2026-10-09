@@ -38,17 +38,33 @@ Everything lives in one `index.html` with inline `<style>` and `<script>` blocks
 
 ## Application Sections
 
-The page is divided into four visual sections, rendered top to bottom:
+The primary brewing surfaces are:
+
+### Brewing setup
+
+Persisted `v60_setup` preferences select a generic or K112 scale, K112 manual or
+automatic hardware mode, app or scale timing, and a zero/three-second app start
+delay. Hardware mode and timing source are independent. The app never connects
+to the scale or infers actual measurements from recipe targets. Setup guidance
+comes from the linked K112 manual; automatic mode is explicitly experimental for
+pulse pours.
 
 ### 1. Header
 Static branding with a link to James Hoffmann's original video.
 
 ### 2. Brew Steps (interactive)
-A 6-step guided brew timer driven by a finite state machine (see below). Steps display recipe-specific values and countdown timers. This section is hidden until a recipe is selected from the table.
+A focused current-step view plus the existing six-step guide, populated by table,
+dose, favorite, shared-link, or last-brew selection. App timing shows cumulative
+targets, planned increments, elapsed time, step countdown and next action. Scale
+timing hides the interactive steps and displays a static reference timeline, with
+an explicit session start/finish and no app brew clock.
 
 ### 3. Ratio Slider
 An `<input type="range">` (1:14 to 1:18, step 0.1) that recalculates the entire recipe table on every `input` event. Features:
 - **Reset button** — appears only when the slider is away from the default.
+- **Dose input** — builds custom whole-gram water recipes from a 0.1g coffee dose.
+  Supported water remains 100-500g; invalid combinations produce a visible error.
+  Dose-based recipes retain coffee when ratio changes; table recipes retain water.
 
 ### 4. Recipe Table
 A dynamically generated `<table>` with rows from 100g to 500g water in 10g increments. Columns: Water, Coffee (1 decimal), Bloom (20% of water), Pour 1 (40% of water), Pour 2 (60% of water), Pour 3 (80% of water), Pour 4 (100% of water). The 250g row is permanently highlighted as the classic recipe. Clicking a row selects it and loads its values into the brew steps.
@@ -71,11 +87,26 @@ locked → available → running → completed
 **Rules:**
 - Only step 1 starts as `available`; all others are `locked`.
 - A step can only become `available` when the previous step is `completed`.
-- Countdown timers auto-complete the step when they reach 0:00.
+- Pour countdowns auto-complete at their deadlines; drawdown requires confirmation.
 - Users may tap a running step to skip ahead early.
 - The "Reset" button returns all steps to their initial state.
 
-### Countdown Durations
+### Clock and drawdown
+
+An app brew uses one wall-clock origin and one refresh interval. Pour deadlines
+are 45, 70, 90, 110 and 125 seconds from the first pour. Each refresh catches up
+all expired steps, so browser throttling does not restart missed durations.
+Early manual advancement does not shift later deadlines. Catch-up skips obsolete
+notifications. The three-second pre-start countdown is separate and may be bypassed
+or disabled. Optional water preparation is not included in elapsed brew time.
+
+The final step is open-ended: 180 seconds is only a target. It shows total elapsed
+time and finishes only on explicit confirmation. A scale-timed session uses
+`scaleBrewActive` instead of a brew interval, and requires manual time entry after
+completion. Both types keep the wake-lock lifecycle and service-worker reload
+guard active. Pending, unsaved results also block update-triggered reloads.
+
+### Reference durations
 
 Derived from James Hoffmann's improved V60 technique timing:
 
@@ -86,7 +117,29 @@ Derived from James Hoffmann's improved V60 technique timing:
 | Pour 2      | 0:20     | Pour to 60% of total by 1:30 (70s+20s)     |
 | Pour 3      | 0:20     | Pour to 80% of total by 1:50 (90s+20s)     |
 | Pour 4      | 0:15     | Pour to 100% of total by 2:05 (110s+15s)   |
-| Finish      | 0:55     | Gently swirl and drain, target ~3:00 total  |
+| Finish      | Open-ended | Gently swirl and drain, target ~3:00 total; user confirms |
+
+### Recipe and result persistence
+
+`makeRecipe` centralizes water/dose validation and cumulative targets. Recipes
+include `ratio` and a `basis` (`water` or `dose`). Custom shares add `coffee` to
+the existing ratio/water URL format. Dose favorites have an additional dose key
+suffix, preserving legacy water/ratio favorite keys without collisions. Legacy
+favorites and last brews are restored as water-first recipes.
+
+Completing a brew snapshots its recipe, equipment/mode, timing source and estimated
+temperature target. The result form requires actual water and a valid `m:ss` time;
+it never saves target water as if measured. `v60_history` stores confirmed dose,
+water, time, notes and the immutable recipe snapshot. Time provenance distinguishes
+app elapsed, manually corrected elapsed, manual scale, and automatic scale readings.
+Automatic scale time is not represented as guaranteed whole-brew elapsed time.
+Repeat uses the original recipe and setup, not the actual-water result.
+
+Controls that would mutate a running recipe or an unsaved result are disabled.
+Reset explicitly clears current timers/results; Save or Skip saving unlocks the
+next brew. Storage failures are visible and failed saves preserve the form.
+Malformed history is not overwritten. History is local-only with individual
+deletion, no implicit retention cutoff, backend or new runtime dependencies.
 
 ## Styling & Theming
 
@@ -186,9 +239,9 @@ activate handler clears old caches and claims clients.
 
 The page listens for `controllerchange` after activation and reloads so the new
 HTML and JavaScript are running. Because brew timer state is in memory, the
-reload is deferred while a brew timer or temperature-prep timer is visibly
-running. A deferred reload is retried when the brew completes or the page is
-backgrounded.
+reload is suppressed while an app brew, scale-timed session, temperature-prep
+timer, or unsaved result is active. First-time control is not treated as an
+update: the initial HTML is already loaded, and reloading would interrupt setup.
 
 ### iOS (iPhone/iPad) Support
 

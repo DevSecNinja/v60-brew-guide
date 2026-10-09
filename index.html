@@ -1821,6 +1821,57 @@
         background: rgba(188, 170, 164, 0.12);
       }
     }
+    [hidden] { display: none !important; }
+
+    .companion-card {
+      background: var(--white);
+      border: 1px solid var(--cream);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+      box-shadow: var(--shadow);
+    }
+
+    .companion-card h2 { font-size: 1.15rem; }
+    .companion-note { color: var(--text-secondary); font-size: 0.85rem; margin: 0.75rem 0; }
+    .companion-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.85rem; margin: 1rem 0; }
+    .companion-fields label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem; }
+    .companion-fields input,
+    .companion-fields select,
+    .companion-fields textarea {
+      width: 100%;
+      padding: 0.65rem;
+      font: inherit;
+      font-size: 1rem;
+      color: var(--text-primary);
+      background: var(--cream-light);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius-sm);
+    }
+    .companion-button {
+      font: inherit;
+      font-weight: 600;
+      padding: 0.75rem 1rem;
+      min-height: 44px;
+      border: 1px solid var(--accent);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      background: var(--cream);
+      cursor: pointer;
+    }
+    .companion-button:hover { background: var(--highlight-bg); }
+    button:disabled, input:disabled, select:disabled { opacity: 0.6; cursor: not-allowed; }
+    .companion-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.75rem; }
+    .companion-card ol { padding-left: 1.4rem; }
+    .companion-card li + li { margin-top: 0.4rem; }
+    .companion-message { padding: 0.75rem; border-left: 3px solid var(--highlight-border); background: var(--highlight-bg); margin-bottom: 1rem; }
+    .brew-focus { padding: 1.25rem; margin: 1rem 0; border-radius: var(--radius); border: 2px solid var(--highlight-border); background: var(--highlight-bg); }
+    .focus-target { display: block; font-size: clamp(1.8rem, 7vw, 3rem); line-height: 1.2; margin: 0.65rem 0; font-variant-numeric: tabular-nums; }
+    .focus-clock { font-size: 1.4rem; font-variant-numeric: tabular-nums; margin: 0.5rem 0; }
+    .brew-timeline { padding-left: 1.4rem; margin: 0.75rem 0; }
+    .history-entry { border-top: 1px solid var(--accent); padding: 1rem 0; overflow-wrap: anywhere; }
+    .history-entry p { margin: 0.4rem 0; white-space: pre-wrap; }
+    .step:focus-visible, .companion-button:focus-visible { outline: 3px solid var(--selected-border); outline-offset: 3px; }
   </style>
 </head>
 <body>
@@ -1845,6 +1896,50 @@
   </header>
 
   <main>
+    <p id="storageWarning" class="companion-message" role="status" hidden></p>
+    <p id="companionMessage" class="companion-message" role="status" hidden></p>
+    <section class="companion-card" aria-labelledby="setupHeading">
+      <h2 id="setupHeading">Your brewing setup</h2>
+      <p class="companion-note">Use any scale, or get button-by-button help for the Maestri House K112. No connection or automatic weight readings are required.</p>
+      <div class="companion-fields">
+        <div>
+          <label for="scaleType">Scale</label>
+          <select id="scaleType">
+            <option value="generic">Any scale</option>
+            <option value="k112">Maestri House K112</option>
+          </select>
+        </div>
+        <div id="k112ModeField" hidden>
+          <label for="k112Mode">K112 hardware mode</label>
+          <select id="k112Mode">
+            <option value="manual">Manual</option>
+            <option value="auto">Automatic (try it out)</option>
+          </select>
+        </div>
+        <div>
+          <label for="timerSource">Follow time on</label>
+          <select id="timerSource">
+            <option value="app">App - guided steps</option>
+            <option value="scale">Scale - reference timeline</option>
+          </select>
+        </div>
+        <div id="startDelayField">
+          <label for="startDelay">App timer start</label>
+          <select id="startDelay">
+            <option value="3">After a 3-second countdown</option>
+            <option value="0">Immediately when tapped</option>
+          </select>
+        </div>
+      </div>
+      <p id="modeGuidance" class="companion-note"></p>
+      <details id="scaleSetup">
+        <summary>Before you pour</summary>
+        <ol id="scaleChecklist"></ol>
+        <p id="k112Safety" class="companion-note" hidden>Use the silicone pad, keep the charging port dry, and do not brew while charging. The 2,000 g limit includes your carafe, dripper, coffee and water, even after taring.
+          <a href="https://cdn.shopify.com/s/files/1/0596/5335/7750/files/K112_EN_DE_Manual.pdf?v=1750065226" target="_blank" rel="noopener">K112 manual</a>
+        </p>
+      </details>
+    </section>
     <details class="brew-intro" id="brewIntro">
       <summary>New to V60? Start here</summary>
       <div class="intro-body">
@@ -1911,6 +2006,7 @@
           <div class="wake-lock-status" id="wakeLockStatus" aria-live="polite">Screen lock prevention: Off</div>
         </div>
         <div class="brew-actions">
+          <button type="button" class="btn-reset-brew" id="btnFavoriteRecipe" hidden>Save favorite</button>
           <button type="button" class="btn-reset-brew" id="btnShareRecipe" title="Share this recipe" hidden>Share</button>
           <button type="button" class="btn-reset-brew" id="btnResetBrew" title="Reset all brew steps">Reset</button>
         </div>
@@ -1926,6 +2022,21 @@
         </span>
         <span class="brew-prep-step-timer" id="temperaturePrepTimer">0:00</span>
       </button>
+      <div id="brewFocus" class="brew-focus" hidden>
+        <div id="focusStage" aria-live="polite"></div>
+        <strong id="focusTarget" class="focus-target"></strong>
+        <p id="focusDetail"></p>
+        <p id="focusClock" class="focus-clock"></p>
+        <p id="focusNext" class="companion-note"></p>
+        <p class="companion-note">Targets, not live readings. Watch your scale; do not tare between pours.</p>
+        <div class="companion-actions">
+          <button type="button" id="btnFocusAction" class="companion-button">Start brew</button>
+        </div>
+      </div>
+      <div id="scaleReference" hidden>
+        <p class="companion-note">Read elapsed time on your scale. This timeline does not advance automatically or detect pours.</p>
+        <ol id="brewTimeline" class="brew-timeline"></ol>
+      </div>
       <div class="steps-grid" id="stepsGrid" style="display:none;">
         <div class="step locked" id="step0" data-step="0">
           <div class="step-label">1 — Bloom</div>
@@ -1978,6 +2089,27 @@
       </div>
     </section>
 
+    <section id="brewResult" class="companion-card" aria-labelledby="resultHeading" hidden>
+      <h2 id="resultHeading">How did it brew?</h2>
+      <p class="companion-note">Confirm the measurements before saving. Water means total water poured, not the drink left in the carafe.</p>
+      <form id="brewResultForm">
+        <div class="companion-fields">
+          <div><label for="resultCoffee">Actual coffee dose (g)</label><input id="resultCoffee" type="number" min="0.1" max="2000" step="0.1" required></div>
+          <div><label for="resultWater">Actual water poured (g)</label><input id="resultWater" type="number" min="0.1" max="2000" step="0.1" required></div>
+          <div><label for="resultTime" id="resultTimeLabel">Drawdown finished at (m:ss)</label><input id="resultTime" type="text" placeholder="3:15" pattern="[0-9]{1,3}:[0-5][0-9]" required></div>
+          <div><label for="resultBeans">Beans / roast (optional)</label><input id="resultBeans" type="text" maxlength="120"></div>
+          <div><label for="resultGrind">Grinder / setting (optional)</label><input id="resultGrind" type="text" maxlength="120"></div>
+          <div><label for="resultTaste">Taste / next adjustment (optional)</label><textarea id="resultTaste" rows="2" maxlength="500"></textarea></div>
+          <div id="resultScaleNotesField" hidden><label for="resultScaleNotes">K112 behavior (optional)</label><textarea id="resultScaleNotes" rows="2" maxlength="500" placeholder="Did auto-start lag or stop between pours?"></textarea></div>
+        </div>
+        <p id="resultFeedback" role="status"></p>
+        <div class="companion-actions">
+          <button type="submit" class="companion-button">Save brew</button>
+          <button type="button" id="btnDiscardResult" class="companion-button">Skip saving</button>
+        </div>
+      </form>
+    </section>
+
     <section class="slider-section">
       <h2>Coffee-to-Water Ratio</h2>
       <div class="slider-wrapper">
@@ -1994,6 +2126,17 @@
         </div>
         <button type="button" class="btn-reset-ratio hidden" id="btnResetRatio">Reset to 1:16.7</button>
       </div>
+      <form id="doseForm">
+        <div class="companion-fields">
+          <div>
+            <label for="coffeeDose">Or start with the coffee you weighed (g)</label>
+            <input id="coffeeDose" type="number" min="0.1" max="35.7" step="0.1" placeholder="15.2" aria-describedby="doseHelp" required>
+          </div>
+        </div>
+        <p id="doseHelp" class="companion-note">Uses the ratio above. Water is rounded to whole grams; supported brews are 100-500 g of water. Changing the ratio keeps your dose fixed.</p>
+        <button type="submit" id="btnUseDose" class="companion-button">Use this dose</button>
+        <p id="doseFeedback" role="status"></p>
+      </form>
     </section>
 
     <section class="table-section">
@@ -2023,6 +2166,12 @@
       <h2><span aria-hidden="true">❤️</span> My Favorites</h2>
       <p class="favorites-hint">Your saved recipes — tap to brew, use ✏ to add or edit a note, drag ☰ to reorder</p>
       <div id="favoritesList" class="favorites-list"></div>
+    </section>
+
+    <section class="companion-card" aria-labelledby="historyHeading">
+      <h2 id="historyHeading">Brew history</h2>
+      <p class="companion-note">Saved only in this browser, including offline. Compare your recipes and K112 modes; clearing browser data removes this history.</p>
+      <div id="brewHistory"><p>No brews saved yet.</p></div>
     </section>
 
     <section class="faq-section">
@@ -2218,55 +2367,80 @@
     // --- localStorage JSON helpers ---
     // All persistence uses these so failures (Safari private mode, quota
     // exceeded, etc.) degrade gracefully without breaking the app.
-    function readJSONStorage(key, fallback) {
+    function readJSONStorage(key, fallback, errorFallback = fallback) {
       try {
         const raw = localStorage.getItem(key);
         return raw ? JSON.parse(raw) : fallback;
       } catch (e) {
-        return fallback;
+        reportStorageError(e);
+        return errorFallback;
       }
     }
 
     function writeJSONStorage(key, value) {
       try {
         localStorage.setItem(key, JSON.stringify(value));
+        return true;
       } catch (e) {
-        // Silently fail if localStorage is not available
+        reportStorageError(e);
+        return false;
       }
     }
 
     function removeStorage(key) {
       try {
         localStorage.removeItem(key);
+        return true;
       } catch (e) {
-        // Silently fail
+        reportStorageError(e);
+        return false;
       }
+    }
+
+    function byId(id) {
+      return document.getElementById(id);
+    }
+
+    function reportStorageError(error) {
+      console.warn('Local brew storage unavailable or unreadable:', error);
+      byId('storageWarning').hidden = false;
+      byId('storageWarning').textContent = 'Browser storage is unavailable or contains unreadable data. Your brew still works, but changes may not be saved. Keep any results you need before closing this page.';
+    }
+
+    function showCompanionMessage(message) {
+      byId('companionMessage').textContent = message;
+      byId('companionMessage').hidden = !message;
     }
 
     // --- Favorites state ---
     const FAVORITES_KEY = 'v60_favorites';
 
     function loadFavorites() {
-      return readJSONStorage(FAVORITES_KEY, []);
+      const saved = readJSONStorage(FAVORITES_KEY, []);
+      if (!Array.isArray(saved)) {
+        reportStorageError(new Error('Invalid favorites'));
+        return [];
+      }
+      return saved;
     }
 
     function saveFavorites(favorites) {
       writeJSONStorage(FAVORITES_KEY, favorites);
     }
 
-    function getFavoriteKey(ratio, water) {
-      return ratio + ':' + water;
+    function getFavoriteKey(ratio, water, coffee, basis = 'water') {
+      return ratio + ':' + water + (basis === 'dose' ? ':dose:' + Number(coffee).toFixed(1) : '');
     }
 
-    function isFavorite(ratio, water) {
+    function isFavorite(ratio, water, coffee, basis = 'water') {
       const favorites = loadFavorites();
-      const key = getFavoriteKey(ratio, water);
+      const key = getFavoriteKey(ratio, water, coffee, basis);
       return favorites.some(f => f.key === key);
     }
 
-    function toggleFavorite(ratio, water, coffee, bloom, pour1, pour2, pour3, pour4) {
+    function toggleFavorite(ratio, water, coffee, bloom, pour1, pour2, pour3, pour4, basis = 'water') {
       const favorites = loadFavorites();
-      const key = getFavoriteKey(ratio, water);
+      const key = getFavoriteKey(ratio, water, coffee, basis);
       const index = favorites.findIndex(f => f.key === key);
 
       if (index >= 0) {
@@ -2282,12 +2456,14 @@
           pour2: pour2,
           pour3: pour3,
           pour4: pour4,
+          basis,
           description: ''
         });
       }
 
       saveFavorites(favorites);
       renderFavorites();
+      renderFavoriteButton();
     }
 
     function updateFavoriteDescription(key, description) {
@@ -2432,18 +2608,19 @@
 
       favorites.forEach((fav) => {
         const isSelected = selectedRecipe && selectedRecipe.water === fav.water &&
+          selectedRecipe.basis === (fav.basis || 'water') && Number(selectedRecipe.coffee) === Number(fav.coffee) &&
           parseFloat(slider.value).toFixed(1) === parseFloat(fav.ratio).toFixed(1);
         const safeKey = escapeHtml(fav.key);
         const descriptionHtml = fav.description
           ? `<div class="favorite-card-description"><span class="favorite-description-text" data-key="${safeKey}">${escapeHtml(fav.description)}</span></div>`
           : '';
 
-        html += `<div class="favorite-card${isSelected ? ' selected' : ''}" draggable="true" data-fav-key="${safeKey}" data-fav-ratio="${fav.ratio}" data-fav-water="${fav.water}" data-fav-coffee="${fav.coffee}" data-fav-bloom="${fav.bloom}" data-fav-pour1="${fav.pour1}" data-fav-pour2="${fav.pour2}" data-fav-pour3="${fav.pour3}" data-fav-pour4="${fav.pour4}">
+        html += `<div class="favorite-card${isSelected ? ' selected' : ''}" draggable="true" data-fav-key="${safeKey}" data-fav-ratio="${escapeHtml(fav.ratio)}" data-fav-water="${escapeHtml(fav.water)}" data-fav-coffee="${escapeHtml(fav.coffee)}" data-fav-basis="${fav.basis === 'dose' ? 'dose' : 'water'}">
           <span class="favorite-drag-handle" aria-label="Drag to reorder" title="Drag to reorder">☰</span>
           <div class="favorite-card-content">
             <div class="favorite-card-header">
               <div>
-                <span class="favorite-card-recipe">${fav.water}g water / ${fav.coffee}g coffee</span>
+                <span class="favorite-card-recipe">${escapeHtml(fav.water)}g water / ${escapeHtml(fav.coffee)}g coffee</span>
                 <span class="favorite-card-ratio">1:${parseFloat(fav.ratio).toFixed(1)}</span>
               </div>
               <div class="favorite-card-actions">
@@ -2544,16 +2721,11 @@
     }
 
     function selectFavoriteRecipe(card) {
-      const ratio = parseFloat(card.dataset.favRatio);
-      const water = parseInt(card.dataset.favWater);
-
-      // Set the slider to the saved ratio
-      slider.value = ratio;
-      handleSliderInput();
-
-      // Find and click the matching row
-      if (selectRecipeByWater(water)) {
-        // Scroll all the way to the top
+      if (restoreRecipe({
+        water: Number(card.dataset.favWater),
+        coffee: card.dataset.favCoffee,
+        basis: card.dataset.favBasis
+      }, Number(card.dataset.favRatio))) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     }
@@ -2609,8 +2781,6 @@
     // --- Brew state ---
     let selectedRecipe = null; // { water, coffee, bloom, pour1, pour2, pour3, pour4 }
     let stepStates = []; // 'locked' | 'available' | 'running' | 'completed'
-    let stepTimers = []; // interval IDs
-    let stepStartTimes = []; // timestamps
     let stepRemaining = []; // remaining seconds (countdown)
     let wakeLock = null; // WakeLock sentinel to keep screen on during brew
     let brewCompleteTimers = []; // timers for post-brew-complete actions
@@ -2620,6 +2790,367 @@
     let temperaturePrepRemaining = 0;
     let temperaturePrepStartedAt = null;
     let temperaturePrepInterval = null;
+    let brewStartedAt = null;
+    let brewClockTimer = null;
+    let scaleBrewActive = false;
+    let pendingBrew = null;
+    const SETUP_KEY = 'v60_setup';
+    const HISTORY_KEY = 'v60_history';
+    const STEP_ENDS = [45, 70, 90, 110, 125, 180];
+    const STEP_NAMES = ['Bloom', 'Pour 1', 'Pour 2', 'Pour 3', 'Pour 4', 'Drawdown'];
+    let brewSetup = { scale: 'generic', mode: 'manual', timer: 'app', delay: '3' };
+
+    function validSetup(value) {
+      return value && ['generic', 'k112'].includes(value.scale) &&
+        ['manual', 'auto'].includes(value.mode) && ['app', 'scale'].includes(value.timer) &&
+        ['0', '3'].includes(value.delay);
+    }
+
+    function restoreSetup() {
+      const saved = readJSONStorage(SETUP_KEY, null);
+      if (saved !== null) {
+        if (validSetup(saved)) brewSetup = saved;
+        else reportStorageError(new Error('Invalid saved setup'));
+      }
+      renderSetup();
+    }
+
+    function renderSetup() {
+      byId('scaleType').value = brewSetup.scale;
+      byId('k112Mode').value = brewSetup.mode;
+      byId('timerSource').value = brewSetup.timer;
+      byId('startDelay').value = brewSetup.delay;
+      const k112 = brewSetup.scale === 'k112';
+      const auto = k112 && brewSetup.mode === 'auto';
+      byId('k112ModeField').hidden = !k112;
+      byId('k112Safety').hidden = !k112;
+      byId('startDelayField').hidden = brewSetup.timer !== 'app';
+      byId('modeGuidance').textContent = auto
+        ? 'Automatic mode is experimental for pulse pours: the manual describes a delayed start and stopping when flow stops. Watch for frozen weight/time during bloom or pauses. The app cannot detect or correct this. If it happens, reset the brew and try manual mode; do not reset the scale between pours.'
+        : brewSetup.timer === 'app'
+          ? 'The app times the whole brew; your scale measures weight. Start pouring when the app timer starts. You do not need to start a second timer.'
+          : 'Your scale is the clock. Start its timer with the first pour and follow the reference timeline here. There is no app brew clock or automatic synchronization.';
+      const tare = k112 ? 'short-press ZERO/POWER' : 'press tare';
+      const instructions = [
+        k112
+          ? 'Switch the K112 on at the back and place it on a level surface. Double-click ZERO/POWER if needed to select g.'
+          : 'Place your scale on a level surface and select grams (g).',
+        'Fit and rinse the filter, preheat the carafe, then discard all rinse water.',
+        `Place the carafe, dripper and wet filter on the scale; ${tare}. Add and weigh your ground coffee.`,
+        `With the coffee and brewing setup still on the scale, ${tare} again. Water should start at 0.0 g.`,
+      ];
+      if (k112) {
+        instructions.push(auto
+          ? 'Hold TIMER for 2 seconds to activate automatic mode; check the display droplet is on and the weight and timer are zero. Flow should start timing automatically, possibly with a delay.'
+          : 'If the display droplet is on, hold TIMER for 2 seconds to leave automatic mode. Double-click TIMER to reset its timer if needed.');
+      }
+      instructions.push(brewSetup.timer === 'app'
+        ? 'Start the app, then begin the bloom when its timer starts. App timing stays independent of any scale timer.'
+        : auto
+          ? 'Begin your pour and check that the scale timer starts. Use the timeline as a reference; automatic time may exclude pauses or drawdown.'
+          : `Start the scale timer with your first pour${k112 ? ' using a short press of TIMER' : ''}. Leave it running through all pauses and drawdown.`);
+      instructions.push('Keep the entire brewing setup on the scale. Do not tare between pours: every target is cumulative water poured.');
+      byId('scaleChecklist').innerHTML = instructions.map(text => `<li>${escapeHtml(text)}</li>`).join('');
+      renderCompanion();
+    }
+
+    function canChangeRecipe() {
+      if (isBrewTimerRunning() || pendingBrew) {
+        showCompanionMessage('Finish or reset the current brew, and save or skip its results before changing your recipe or setup.');
+        return false;
+      }
+      return true;
+    }
+
+    function changeSetup() {
+      if (!canChangeRecipe()) {
+        renderSetup();
+        return;
+      }
+      brewSetup = {
+        scale: byId('scaleType').value, mode: byId('k112Mode').value,
+        timer: byId('timerSource').value, delay: byId('startDelay').value
+      };
+      writeJSONStorage(SETUP_KEY, brewSetup);
+      if (selectedRecipe) resetBrewState({ releaseLock: false });
+      renderSetup();
+    }
+
+    function makeRecipe(water, ratio, dose = null) {
+      if (!Number.isFinite(ratio) || ratio < 14 || ratio > 18 ||
+          Math.abs(ratio * 10 - Math.round(ratio * 10)) > 0.00001 ||
+          !Number.isInteger(water) || water < 100 || water > 500 ||
+          (dose !== null && (!Number.isFinite(dose) || dose <= 0 ||
+            Math.abs(dose * 10 - Math.round(dose * 10)) > 0.00001 || Math.round(dose * ratio) !== water))) {
+        throw new Error('Use a ratio from 1:14 to 1:18 and a recipe with 100-500 g water. Coffee doses must be positive, in 0.1 g increments.');
+      }
+      return {
+        water, ratio, coffee: (dose === null ? water / ratio : dose).toFixed(1),
+        bloom: String(Math.round(water * 0.2)), pour1: String(Math.round(water * 0.4)),
+        pour2: String(Math.round(water * 0.6)), pour3: String(Math.round(water * 0.8)),
+        pour4: String(water), basis: dose === null ? 'water' : 'dose'
+      };
+    }
+
+    function restoreRecipe(recipe, ratio) {
+      if (!canChangeRecipe()) return false;
+      let restored;
+      try {
+        restored = makeRecipe(Number(recipe.water), Number(ratio), recipe.basis === 'dose' ? Number(recipe.coffee) : null);
+      } catch (error) {
+        showCompanionMessage(error.message);
+        return false;
+      }
+      slider.value = restored.ratio;
+      ratioDisplay.textContent = '1:' + restored.ratio.toFixed(1);
+      btnResetRatio.classList.toggle('hidden', restored.ratio === DEFAULT_RATIO);
+      loadRecipe(restored);
+      generateTable(restored.ratio);
+      return true;
+    }
+
+    function recipeTargets() {
+      return ['bloom', 'pour1', 'pour2', 'pour3', 'pour4'].map(key => Number(selectedRecipe[key]));
+    }
+
+    function elapsedBrewSeconds() {
+      return brewStartedAt === null ? 0 : Math.max(0, Math.floor((Date.now() - brewStartedAt) / 1000));
+    }
+
+    function renderFavoriteButton() {
+      const button = byId('btnFavoriteRecipe');
+      button.hidden = !selectedRecipe;
+      if (!selectedRecipe) return;
+      const recipe = selectedRecipe;
+      const saved = isFavorite(recipe.ratio.toFixed(1), recipe.water, recipe.coffee, recipe.basis);
+      button.textContent = saved ? 'Remove favorite' : 'Save favorite';
+      button.setAttribute('aria-pressed', String(saved));
+    }
+
+    function renderCompanion() {
+      const locked = isBrewTimerRunning() || Boolean(pendingBrew);
+      ['scaleType', 'k112Mode', 'timerSource', 'startDelay', 'ratioSlider', 'btnResetRatio',
+        'coffeeDose', 'btnUseDose', 'temperatureEstimatorVolume', 'temperatureEstimatorTarget'].forEach(id => {
+        byId(id).disabled = locked;
+      });
+      byId('btnBrewAgain').disabled = Boolean(pendingBrew);
+      byId('brewFocus').hidden = !selectedRecipe || isBrewComplete();
+      const scaleTimed = brewSetup.timer === 'scale';
+      byId('scaleReference').hidden = !selectedRecipe || !scaleTimed || isBrewComplete();
+      stepsGrid.hidden = scaleTimed;
+      if (!selectedRecipe || isBrewComplete()) return;
+      const targets = recipeTargets();
+      if (scaleTimed) {
+        const timeline = targets.map((target, index) =>
+          `<li><strong>${STEP_NAMES[index]}: ${target} g total</strong> (+${target - (targets[index - 1] || 0)} g) - ${index === 0 ? 'pour at 0:00, swirl and wait until 0:45' : 'by ' + formatTime(STEP_ENDS[index])}</li>`);
+        byId('brewTimeline').innerHTML = timeline.join('') + '<li>Swirl and drain. Around 3:00 is a target, not an automatic finish.</li>';
+      }
+      const active = stepStates.findIndex(state => state === 'running' || state === 'countdown');
+      const index = active < 0 ? 0 : active;
+      const prep = temperaturePrepState === 'available' || temperaturePrepState === 'running';
+      const countdown = stepStates[0] === 'countdown';
+      const stage = prep ? 'Prepare your water' : scaleTimed ? 'Scale-timed brew' : STEP_NAMES[index];
+      if (byId('focusStage').textContent !== stage) byId('focusStage').textContent = stage;
+      byId('focusTarget').textContent = prep ? 'Water before bloom' : scaleTimed && scaleBrewActive
+        ? `${selectedRecipe.water} g final target` : index === 5 ? 'Swirl and let it drain' : `Pour to ${targets[index]} g total`;
+      byId('focusDetail').textContent = prep ? 'Complete the water preparation step above to unlock your brew.'
+        : scaleTimed ? 'Follow the cumulative targets and times below.'
+        : index === 5 ? 'Finish when the coffee has drained, even if that is before or after 3:00.'
+        : `This pour: +${targets[index] - (targets[index - 1] || 0)} g. ${index === 0 ? 'Pour, swirl, then wait until 0:45.' : 'Target ' + formatTime(STEP_ENDS[index]) + ' from the first pour.'}`;
+      byId('focusClock').textContent = prep ? '' : scaleTimed ? 'Clock: your scale (not connected)'
+        : countdown ? `Start pouring in ${countdownCount}`
+        : `Elapsed ${formatTime(elapsedBrewSeconds())}${active >= 0 && index < 5 ? ' | Step remaining ' + formatTime(stepRemaining[index]) : ''}`;
+      byId('focusNext').textContent = scaleTimed || prep ? '' : index < 4
+        ? `Next: ${STEP_NAMES[index + 1]} to ${targets[index + 1]} g by ${formatTime(STEP_ENDS[index + 1])}`
+        : index === 4 ? 'Next: swirl and drawdown.' : 'No more water to add.';
+      const action = byId('btnFocusAction');
+      action.disabled = prep;
+      action.textContent = scaleTimed ? (scaleBrewActive ? 'Drawdown finished' : 'Begin scale-timed brew')
+        : countdown ? 'Start pouring now' : active < 0 ? 'Start brew' : index === 5 ? 'Drawdown finished' : 'Next step now';
+    }
+
+    function handleFocusAction() {
+      if (!selectedRecipe || isBrewComplete() || temperaturePrepState === 'available' || temperaturePrepState === 'running') return;
+      if (brewSetup.timer === 'scale') {
+        if (scaleBrewActive) {
+          scaleBrewActive = false;
+          stepStates.fill('completed');
+          showBrewComplete();
+        } else {
+          scaleBrewActive = true;
+          requestWakeLock();
+          renderCompanion();
+        }
+      } else {
+        const index = stepStates.findIndex(state => ['available', 'running', 'countdown'].includes(state));
+        if (index >= 0) handleStepClick(index);
+      }
+    }
+
+    function tickBrew() {
+      let index = stepStates.findIndex(state => state === 'running');
+      const elapsed = elapsedBrewSeconds();
+      while (index >= 0 && index < 5 && elapsed >= STEP_ENDS[index]) {
+        completeStep(index, index === 4 || elapsed < STEP_ENDS[index + 1]);
+        index = stepStates.findIndex(state => state === 'running');
+      }
+      if (index >= 0) {
+        stepRemaining[index] = Math.max(0, STEP_ENDS[index] - elapsed);
+        byId('step' + index + 'Timer').textContent = index === 5 ? formatTime(elapsed) : formatTime(stepRemaining[index]);
+      }
+      renderCompanion();
+    }
+
+    function prepareBrewResult() {
+      const elapsed = brewSetup.timer === 'app' ? elapsedBrewSeconds() : null;
+      pendingBrew = {
+        id: Date.now().toString(36) + '-' + Math.random().toString(36).slice(2),
+        completedAt: Date.now(), recipe: { ...selectedRecipe }, setup: { ...brewSetup },
+        temperature: getTemperatureEstimatorSelection().targetTemp,
+        kettleFill: getTemperatureEstimatorSelection().volume,
+        appElapsed: elapsed
+      };
+      byId('brewResultForm').reset();
+      byId('resultCoffee').value = selectedRecipe.coffee;
+      byId('resultTime').value = elapsed === null ? '' : formatTime(elapsed);
+      byId('resultTimeLabel').textContent = brewSetup.timer === 'app'
+        ? 'Drawdown finished at (m:ss; editable)'
+        : brewSetup.scale === 'k112' && brewSetup.mode === 'auto'
+          ? 'Reported auto-timer time (m:ss; may exclude pauses / drawdown)'
+          : 'Final scale timer reading (m:ss)';
+      byId('resultScaleNotesField').hidden = brewSetup.scale !== 'k112';
+      byId('resultFeedback').textContent = '';
+      byId('brewResult').hidden = false;
+    }
+
+    function parseBrewTime(value) {
+      const match = String(value).trim().match(/^(\d{1,3}):([0-5]\d)$/);
+      return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+    }
+
+    function validMeasurement(value) {
+      return Number.isFinite(value) && value > 0 && value <= 2000 &&
+        Math.abs(value * 10 - Math.round(value * 10)) < 0.00001;
+    }
+
+    function loadBrewHistory() {
+      const saved = readJSONStorage(HISTORY_KEY, [], null);
+      try {
+        if (!Array.isArray(saved)) throw new Error('History must be a list');
+        const ids = new Set();
+        for (const entry of saved) {
+          if (!entry || typeof entry.id !== 'string' || ids.has(entry.id) ||
+              !Number.isFinite(entry.completedAt) || !Number.isFinite(new Date(entry.completedAt).getTime()) ||
+              !validSetup(entry.setup) || !validMeasurement(entry.coffee) || !validMeasurement(entry.water) ||
+              !Number.isInteger(entry.seconds) || entry.seconds < 0 || entry.seconds > 59999 ||
+              !['app', 'manual-entry', 'scale-manual', 'scale-auto'].includes(entry.timeSource) ||
+              (entry.temperature !== null && ![90, 91, 92, 93, 94, 95, 96].includes(entry.temperature)) ||
+              ![300, 500, 1000].includes(entry.kettleFill) ||
+              !['beans', 'grind', 'taste', 'scaleNotes'].every(key => typeof entry[key] === 'string') ||
+              !entry.recipe) throw new Error('Invalid brew history entry');
+          makeRecipe(entry.recipe.water, entry.recipe.ratio, entry.recipe.basis === 'dose' ? Number(entry.recipe.coffee) : null);
+          ids.add(entry.id);
+        }
+        return saved;
+      } catch (error) {
+        reportStorageError(error);
+        return null;
+      }
+    }
+
+    function saveBrewResult(event) {
+      event.preventDefault();
+      if (!pendingBrew) return;
+      const coffee = Number(byId('resultCoffee').value);
+      const water = Number(byId('resultWater').value);
+      const seconds = parseBrewTime(byId('resultTime').value);
+      const feedback = byId('resultFeedback');
+      if (!byId('brewResultForm').checkValidity() || !validMeasurement(coffee) ||
+          !validMeasurement(water) || seconds === null) {
+        feedback.textContent = 'Enter positive coffee and water weights in 0.1 g increments (up to 2,000 g), and a time such as 3:15.';
+        return;
+      }
+      const history = loadBrewHistory();
+      if (history === null) {
+        feedback.textContent = 'History could not be read. This result has not been saved; keep a copy of your measurements.';
+        return;
+      }
+      const timeSource = pendingBrew.setup.timer === 'app'
+        ? (seconds === pendingBrew.appElapsed ? 'app' : 'manual-entry')
+        : pendingBrew.setup.scale === 'k112' && pendingBrew.setup.mode === 'auto' ? 'scale-auto' : 'scale-manual';
+      const entry = {
+        ...pendingBrew, coffee, water, seconds, timeSource,
+        beans: byId('resultBeans').value.trim(), grind: byId('resultGrind').value.trim(),
+        taste: byId('resultTaste').value.trim(), scaleNotes: byId('resultScaleNotes').value.trim()
+      };
+      if (!writeJSONStorage(HISTORY_KEY, [entry, ...history])) {
+        feedback.textContent = 'Could not save this brew. Your result is still here; free browser storage or copy it before leaving.';
+        return;
+      }
+      pendingBrew = null;
+      byId('brewResult').hidden = true;
+      showCompanionMessage('Brew saved locally. You can compare it in Brew history.');
+      renderBrewHistory();
+      renderCompanion();
+    }
+
+    function renderBrewHistory() {
+      const history = loadBrewHistory();
+      const container = byId('brewHistory');
+      if (history === null) {
+        container.textContent = 'Saved history could not be read. It has not been overwritten.';
+        return;
+      }
+      if (!history.length) {
+        container.innerHTML = '<p>No brews saved yet.</p>';
+        return;
+      }
+      const timeLabels = { app: 'app-measured elapsed', 'manual-entry': 'manually corrected elapsed',
+        'scale-manual': 'reported scale time', 'scale-auto': 'reported automatic time; may exclude pauses / drawdown' };
+      container.innerHTML = history.map(entry => {
+        const setup = entry.setup.scale === 'k112' ? `K112 ${entry.setup.mode === 'auto' ? 'automatic' : 'manual'}` : 'Any scale';
+        const notes = [
+          ['Beans', entry.beans], ['Grind', entry.grind], ['Taste / next adjustment', entry.taste],
+          ['Scale behavior', entry.scaleNotes]
+        ].filter(([, value]) => value).map(([label, value]) => `<p>${label}: ${escapeHtml(value)}</p>`).join('');
+        return `<article class="history-entry">
+          <h3>${escapeHtml(new Date(entry.completedAt).toLocaleString())}</h3>
+          <p>${setup} | ${entry.setup.timer === 'app' ? 'App-guided' : 'Scale-timed'}</p>
+          <p>Actual: ${entry.coffee.toFixed(1)} g coffee / ${entry.water.toFixed(1)} g water | 1:${(entry.water / entry.coffee).toFixed(2)}</p>
+          <p>${formatTime(entry.seconds)} (${timeLabels[entry.timeSource]})</p>
+          <p>Recipe target: ${entry.recipe.water} g water / ${entry.recipe.coffee} g coffee, 1:${entry.recipe.ratio.toFixed(1)}${entry.temperature ? ' | Temperature target: ' + escapeHtml(entry.temperature) + ' °C (estimated)' : ''}</p>
+          ${notes}
+          <div class="companion-actions">
+            <button type="button" class="companion-button" data-history-repeat="${escapeHtml(entry.id)}">Repeat recipe and setup</button>
+            <button type="button" class="companion-button" data-history-delete="${escapeHtml(entry.id)}">Delete brew</button>
+          </div>
+        </article>`;
+      }).join('');
+    }
+
+    function handleHistoryClick(event) {
+      const repeat = event.target.closest('[data-history-repeat]');
+      const remove = event.target.closest('[data-history-delete]');
+      if (!repeat && !remove) return;
+      const history = loadBrewHistory();
+      if (history === null) return;
+      if (repeat) {
+        if (!canChangeRecipe()) return;
+        const entry = history.find(item => item.id === repeat.dataset.historyRepeat);
+        if (!entry) return;
+        if (!restoreRecipe(entry.recipe, entry.recipe.ratio)) return;
+        brewSetup = { ...entry.setup };
+        writeJSONStorage(SETUP_KEY, brewSetup);
+        temperatureEstimatorVolume.value = String(entry.kettleFill);
+        temperatureEstimatorTarget.value = entry.temperature == null ? '' : String(entry.temperature);
+        saveTemperatureEstimatorState(temperatureEstimatorVolume.value, temperatureEstimatorTarget.value);
+        resetBrewState({ releaseLock: false });
+        renderSetup();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else if (window.confirm('Delete this saved brew from this browser?')) {
+        if (writeJSONStorage(HISTORY_KEY, history.filter(item => item.id !== remove.dataset.historyDelete))) renderBrewHistory();
+      }
+    }
 
     // Per-step metadata: duration (seconds) and completion notification copy.
     // Durations are derived from James Hoffmann's improved V60 technique:
@@ -2820,7 +3351,7 @@
 
     // Check if brew is currently running (any step in 'running' state)
     function isBrewRunning() {
-      return stepStates.some(s => s === 'running' || s === 'countdown');
+      return scaleBrewActive || stepStates.some(s => s === 'running' || s === 'countdown');
     }
 
     function isBrewComplete() {
@@ -2834,7 +3365,7 @@
     }
 
     function reloadForServiceWorkerUpdate() {
-      if (isBrewTimerRunning()) {
+      if (isBrewTimerRunning() || pendingBrew) {
         console.log('New service worker activated; brew timer is running, skipping reload.');
         return;
       }
@@ -2870,7 +3401,20 @@
 
     // --- Slider input handler ---
     function handleSliderInput() {
+      if (isBrewTimerRunning() || pendingBrew) {
+        slider.value = selectedRecipe ? selectedRecipe.ratio : DEFAULT_RATIO;
+        showCompanionMessage('Finish or reset your brew before changing the ratio.');
+        return;
+      }
       const val = parseFloat(slider.value);
+      if (selectedRecipe) {
+        const dose = selectedRecipe.basis === 'dose' ? Number(selectedRecipe.coffee) : null;
+        const water = dose === null ? selectedRecipe.water : Math.round(dose * val);
+        if (!restoreRecipe({ water, coffee: dose, basis: selectedRecipe.basis }, val)) {
+          slider.value = selectedRecipe.ratio;
+          return;
+        }
+      }
       ratioDisplay.textContent = '1:' + val.toFixed(1);
       btnResetRatio.classList.toggle('hidden', val === DEFAULT_RATIO);
       generateTable(val);
@@ -2893,6 +3437,7 @@
         }
         if (selectedRecipe && selectedRecipe.water) {
           params.set('water', String(selectedRecipe.water));
+          if (selectedRecipe.basis === 'dose') params.set('coffee', selectedRecipe.coffee);
         }
         const query = params.toString();
         const newUrl = window.location.pathname + (query ? '?' + query : '') + window.location.hash;
@@ -2911,7 +3456,7 @@
       if (isNaN(val)) return null;
       const min = parseFloat(slider.min);
       const max = parseFloat(slider.max);
-      if (val < min || val > max) return null;
+      if (val < min || val > max || Math.abs(val * 10 - Math.round(val * 10)) > 0.00001) return null;
       return val;
     }
 
@@ -2920,15 +3465,16 @@
       const ratio = parseRatioParam(params.get('ratio'));
       if (ratio !== null) {
         slider.value = ratio;
+      } else if (params.has('ratio')) {
+        showCompanionMessage('The shared ratio is invalid; using 1:16.7.');
       }
       handleSliderInput();
 
-      const waterRaw = params.get('water');
-      if (waterRaw !== null) {
-        const water = parseInt(waterRaw, 10);
-        if (!isNaN(water)) {
-          selectRecipeByWater(water);
-        }
+      if (params.has('coffee')) {
+        const coffee = Number(params.get('coffee'));
+        restoreRecipe({ water: Math.round(coffee * Number(slider.value)), coffee, basis: 'dose' }, Number(slider.value));
+      } else if (params.has('water')) {
+        selectRecipeByWater(Number(params.get('water')));
       }
     }
 
@@ -2937,14 +3483,9 @@
       let html = '';
       const currentRatio = ratio.toFixed(1);
       for (let water = 100; water <= 500; water += 10) {
-        const coffee = (water / ratio).toFixed(1);
-        const bloom = Math.round(water * 0.2);
-        const pour1 = Math.round(water * 0.4);
-        const pour2 = Math.round(water * 0.6);
-        const pour3 = Math.round(water * 0.8);
-        const pour4 = water;
+        const { coffee, bloom, pour1, pour2, pour3, pour4 } = makeRecipe(water, ratio);
         const isHighlight = water === 250;
-        const isSelected = selectedRecipe && selectedRecipe.water === water;
+        const isSelected = selectedRecipe && selectedRecipe.water === water && selectedRecipe.basis === 'water';
         const favorited = isFavorite(currentRatio, water);
 
         let classes = [];
@@ -2981,6 +3522,7 @@
           toggleFavorite(btn.dataset.ratio, parseInt(btn.dataset.water), btn.dataset.coffee, btn.dataset.bloom, btn.dataset.pour1, btn.dataset.pour2, btn.dataset.pour3, btn.dataset.pour4);
           generateTable(ratio);
         });
+        renderFavoriteButton();
       });
     }
 
@@ -2988,29 +3530,35 @@
     // Find the table row matching the given water value and select it.
     // Returns the row element, or null if no matching row exists.
     function selectRecipeByWater(water) {
-      if (water == null || isNaN(water)) return null;
+      if (!Number.isInteger(water) || water < 100 || water > 500) {
+        showCompanionMessage('Choose a whole-gram water target between 100 and 500 g.');
+        return null;
+      }
+      if (!canChangeRecipe()) return null;
       const targetRow = tableBody.querySelector(`tr[data-water="${water}"]`);
       if (targetRow) {
         selectRecipe(targetRow);
         return targetRow;
       }
-      return null;
+      const recipe = makeRecipe(water, Number(slider.value));
+      loadRecipe(recipe);
+      return recipe;
     }
 
     function selectRecipe(row) {
-      const water = parseInt(row.dataset.water);
-      const coffee = row.dataset.coffee;
-      const bloom = row.dataset.bloom;
-      const pour1 = row.dataset.pour1;
-      const pour2 = row.dataset.pour2;
-      const pour3 = row.dataset.pour3;
-      const pour4 = row.dataset.pour4;
+      if (!canChangeRecipe()) return;
+      loadRecipe(makeRecipe(Number(row.dataset.water), Number(slider.value)));
+    }
 
-      selectedRecipe = { water, coffee, bloom, pour1, pour2, pour3, pour4 };
+    function loadRecipe(recipe) {
+      const { water, coffee, bloom, pour1, pour2, pour3, pour4 } = recipe;
+      selectedRecipe = recipe;
+      byId('coffeeDose').value = recipe.basis === 'dose' ? coffee : '';
 
       // Update table highlight
       tableBody.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
-      row.classList.add('selected');
+      const row = tableBody.querySelector(`tr[data-water="${water}"]`);
+      if (row && recipe.basis === 'water') row.classList.add('selected');
 
       // Show steps grid, hide notice
       noRecipeNotice.style.display = 'none';
@@ -3037,19 +3585,26 @@
 
       // Sync favorites selection highlight
       renderFavorites();
+      renderFavoriteButton();
 
       // Ask for notification permission here (still inside the user gesture
       // that selected the recipe) rather than on the brew-start tap. On iOS
       // PWAs, surfacing a permission prompt in the same gesture as the
       // wake-lock request causes the wake lock to be released immediately
       // after it is granted, so the screen turns off during brewing.
-      if (notificationPermission === 'default') {
+      if (notificationPermission === 'default' && brewSetup.timer === 'app') {
         requestNotificationPermission();
       }
     }
 
     // --- Brew step logic ---
     function resetBrewState({ releaseLock = true } = {}) {
+      clearInterval(brewClockTimer);
+      brewClockTimer = null;
+      brewStartedAt = null;
+      scaleBrewActive = false;
+      pendingBrew = null;
+      byId('brewResult').hidden = true;
       // Cancel any active pre-start countdown
       if (countdownTimer !== null) {
         clearInterval(countdownTimer);
@@ -3057,13 +3612,7 @@
         countdownCount = 0;
       }
 
-      // Clear all timers
-      for (let i = 0; i < STEP_COUNT; i++) {
-        if (stepTimers[i]) clearInterval(stepTimers[i]);
-      }
       clearTemperaturePrepTimer();
-      stepTimers = new Array(STEP_COUNT).fill(null);
-      stepStartTimes = new Array(STEP_COUNT).fill(null);
       stepRemaining = STEP_DURATIONS.slice(); // copy durations as initial countdown
       stepStates = new Array(STEP_COUNT).fill('locked');
 
@@ -3093,7 +3642,7 @@
 
       // Hide completion message, restore steps grid
       stepsGrid.classList.remove('fade-out');
-      stepsGrid.style.display = '';
+      stepsGrid.style.display = selectedRecipe ? '' : 'none';
       document.getElementById('brewComplete').classList.remove('show');
       document.getElementById('btnBrewAgain').classList.remove('visible');
 
@@ -3108,6 +3657,10 @@
         const hintEl = document.getElementById('step' + i + 'Hint');
 
         el.className = 'step ' + stepStates[i];
+        const interactive = brewSetup.timer === 'app' && ['available', 'countdown', 'running'].includes(stepStates[i]);
+        el.setAttribute('role', 'button');
+        el.tabIndex = interactive ? 0 : -1;
+        el.setAttribute('aria-disabled', String(!interactive));
         timerEl.textContent = stepStates[i] === 'countdown'
           ? String(countdownCount)
           : formatTime(Math.max(0, stepRemaining[i]));
@@ -3123,13 +3676,15 @@
             hintEl.textContent = '▶ Tap to skip countdown';
             break;
           case 'running':
-            hintEl.textContent = '⏱ Tap to skip';
+            hintEl.textContent = i === 5 ? 'Tap when drawdown finishes' : '⏱ Tap to skip';
             break;
           case 'completed':
             hintEl.textContent = '✓ Done';
             break;
         }
+        if (i === 5 && stepStates[i] === 'running') timerEl.textContent = formatTime(elapsedBrewSeconds());
       }
+      renderCompanion();
     }
 
     function formatTime(seconds) {
@@ -3377,18 +3932,20 @@
       }
     }
 
-    function completeStep(stepIndex) {
-      clearInterval(stepTimers[stepIndex]);
-      stepTimers[stepIndex] = null;
+    function completeStep(stepIndex, announce = true) {
+      if (!['running', 'countdown'].includes(stepStates[stepIndex])) return;
+      if (stepStates[stepIndex] === 'countdown') {
+        cancelCountdown();
+        startStep(stepIndex);
+      }
       stepRemaining[stepIndex] = 0;
       stepStates[stepIndex] = 'completed';
 
-      // Play completion sound and haptic feedback
-      playCompletionSound();
-      playHapticFeedback();
-
-      // Show notification
-      showStepNotification(stepIndex);
+      if (announce) {
+        playCompletionSound();
+        playHapticFeedback();
+        showStepNotification(stepIndex);
+      }
 
       // Unlock and auto-start next step
       if (stepIndex + 1 < STEP_COUNT) {
@@ -3405,10 +3962,11 @@
     }
 
     function showBrewComplete() {
+      clearInterval(brewClockTimer);
+      brewClockTimer = null;
+      prepareBrewResult();
       stepsGrid.classList.add('fade-out');
-      stepsGrid.addEventListener('animationend', () => {
-        stepsGrid.style.display = 'none';
-      }, { once: true });
+      stepsGrid.style.display = 'none';
       if (temperaturePrepStep) {
         temperaturePrepStep.style.display = 'none';
       }
@@ -3432,7 +3990,7 @@
       brewCompleteTimers.push(setTimeout(() => {
         releaseWakeLock();
       }, WAKE_LOCK_RELEASE_DELAY_MS));
-
+      renderCompanion();
     }
 
     function clearBrewCompleteTimers() {
@@ -3461,11 +4019,13 @@
         const elapsed = (Date.now() - temperaturePrepStartedAt) / 1000;
         temperaturePrepRemaining = Math.max(0, Math.ceil(duration - elapsed));
         renderTemperaturePrepStep(getTemperatureEstimatorSelection());
+        renderCompanion();
         if (temperaturePrepRemaining <= 0) {
           completeTemperaturePrepStep();
         }
       }, 200);
       renderTemperaturePrepStep(getTemperatureEstimatorSelection());
+      renderCompanion();
     }
 
     function handleTemperaturePrepClick() {
@@ -3501,22 +4061,18 @@
       document.getElementById('step' + stepIndex + 'Timer').classList.remove('countdown-pop');
 
       stepStates[stepIndex] = 'running';
-      stepStartTimes[stepIndex] = Date.now();
-      const duration = stepRemaining[stepIndex];
-      stepTimers[stepIndex] = setInterval(() => {
-        const elapsed = (Date.now() - stepStartTimes[stepIndex]) / 1000;
-        stepRemaining[stepIndex] = Math.max(0, Math.ceil(duration - elapsed));
-        document.getElementById('step' + stepIndex + 'Timer').textContent = formatTime(stepRemaining[stepIndex]);
-        if (stepRemaining[stepIndex] <= 0) {
-          completeStep(stepIndex);
-        }
-      }, 200);
+      if (brewStartedAt === null) {
+        brewStartedAt = Date.now();
+        brewClockTimer = setInterval(tickBrew, 200);
+      }
+      stepRemaining[stepIndex] = Math.max(0, STEP_ENDS[stepIndex] - elapsedBrewSeconds());
       renderSteps();
     }
 
     function startCountdown(stepIndex) {
       stepStates[stepIndex] = 'countdown';
       countdownCount = 3;
+      const countdownEndsAt = Date.now() + 3000;
       renderSteps();
 
       // Animate the initial number
@@ -3526,7 +4082,7 @@
       timerEl.classList.add('countdown-pop');
 
       countdownTimer = setInterval(() => {
-        countdownCount--;
+        countdownCount = Math.max(0, Math.ceil((countdownEndsAt - Date.now()) / 1000));
         if (countdownCount <= 0) {
           clearInterval(countdownTimer);
           countdownTimer = null;
@@ -3543,6 +4099,7 @@
     }
 
     function handleStepClick(stepIndex) {
+      if (brewSetup.timer !== 'app') return;
       const state = stepStates[stepIndex];
 
       if (state === 'available') {
@@ -3562,7 +4119,8 @@
 
         if (stepIndex === 0) {
           // Show 3-second countdown before starting the recipe
-          startCountdown(stepIndex);
+          if (brewSetup.delay === '0') startStep(stepIndex);
+          else startCountdown(stepIndex);
         } else {
           // Auto-started steps begin immediately (no countdown needed)
           startStep(stepIndex);
@@ -3580,19 +4138,27 @@
 
     // Attach step click handlers
     for (let i = 0; i < STEP_COUNT; i++) {
-      document.getElementById('step' + i).addEventListener('click', () => handleStepClick(i));
+      const step = document.getElementById('step' + i);
+      step.addEventListener('click', () => handleStepClick(i));
+      step.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          handleStepClick(i);
+        }
+      });
     }
 
     // Reset brew button
     btnResetBrew.addEventListener('click', () => {
       if (selectedRecipe) {
+        if (pendingBrew) showCompanionMessage('Brew reset. The unsaved result was discarded.');
         resetBrewState();
       }
     });
 
     // Brew another one button
     document.getElementById('btnBrewAgain').addEventListener('click', () => {
-      if (selectedRecipe) {
+      if (selectedRecipe && !pendingBrew) {
         resetBrewState();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
@@ -3602,6 +4168,11 @@
     slider.addEventListener('input', handleSliderInput);
     btnResetRatio.addEventListener('click', resetRatio);
     function handleTemperatureEstimatorChange() {
+      if (isBrewTimerRunning() || pendingBrew) {
+        restoreTemperatureEstimatorState();
+        showCompanionMessage('Finish or reset your brew before changing water preparation.');
+        return;
+      }
       saveTemperatureEstimatorState(temperatureEstimatorVolume.value, temperatureEstimatorTarget.value);
       if (selectedRecipe && !hasStartedBrewSteps()) {
         resetBrewState({ releaseLock: false });
@@ -3615,6 +4186,43 @@
     if (temperaturePrepStep) {
       temperaturePrepStep.addEventListener('click', handleTemperaturePrepClick);
     }
+
+    ['scaleType', 'k112Mode', 'timerSource', 'startDelay'].forEach(id => byId(id).addEventListener('change', changeSetup));
+    byId('btnFocusAction').addEventListener('click', handleFocusAction);
+    byId('brewResultForm').addEventListener('submit', saveBrewResult);
+    byId('brewHistory').addEventListener('click', handleHistoryClick);
+    byId('btnDiscardResult').addEventListener('click', () => {
+      pendingBrew = null;
+      byId('brewResult').hidden = true;
+      showCompanionMessage('Result discarded without saving.');
+      renderCompanion();
+    });
+    byId('doseForm').addEventListener('submit', event => {
+      event.preventDefault();
+      if (!canChangeRecipe()) return;
+      const dose = Number(byId('coffeeDose').value);
+      const ratio = Number(slider.value);
+      const water = Math.round(dose * ratio);
+      if (!byId('doseForm').checkValidity() || !Number.isFinite(dose) || dose <= 0 || water < 100 || water > 500) {
+        byId('doseFeedback').textContent = 'Enter a coffee dose in 0.1 g increments that makes 100-500 g water at this ratio.';
+        return;
+      }
+      if (restoreRecipe({ water, coffee: dose, basis: 'dose' }, ratio)) {
+        byId('doseFeedback').textContent = `${dose.toFixed(1)} g coffee uses ${water} g water (rounded to whole grams).`;
+      }
+    });
+    byId('btnFavoriteRecipe').addEventListener('click', () => {
+      if (!selectedRecipe) return;
+      const r = selectedRecipe;
+      toggleFavorite(r.ratio.toFixed(1), r.water, r.coffee, r.bloom, r.pour1, r.pour2, r.pour3, r.pour4, r.basis);
+      generateTable(r.ratio);
+    });
+    window.addEventListener('beforeunload', event => {
+      if (isBrewTimerRunning() || pendingBrew) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    });
 
     // --- Share button ---
     async function shareCurrentRecipe() {
@@ -3656,23 +4264,19 @@
     }
 
     // --- Init ---
-    applyUrlParams();
+    restoreSetup();
     restoreTemperatureEstimatorState();
+    applyUrlParams();
     renderWakeLockStatus();
     renderTemperatureEstimator();
     renderFavorites();
+    renderBrewHistory();
 
     // Restore last brew from localStorage (only if URL params didn't already select a recipe)
     if (!selectedRecipe) {
       const lastBrew = loadLastBrew();
       if (lastBrew && lastBrew.recipe) {
-        // Set the slider to the saved ratio
-        if (lastBrew.ratio !== undefined) {
-          slider.value = lastBrew.ratio;
-          handleSliderInput();
-        }
-        // Find and select the matching row
-        selectRecipeByWater(lastBrew.recipe.water);
+        restoreRecipe(lastBrew.recipe, lastBrew.ratio === undefined ? DEFAULT_RATIO : lastBrew.ratio);
       }
     }
 
@@ -3729,11 +4333,17 @@
     // --- Service Worker Registration ---
     if ('serviceWorker' in navigator) {
       let refreshing = false;
+      let hasBeenControlled = Boolean(navigator.serviceWorker.controller);
 
       // Handle controller change (new SW activated)
       navigator.serviceWorker.addEventListener('controllerchange', () => {
+        // First installation already has current HTML; do not interrupt setup.
+        if (!hasBeenControlled) {
+          hasBeenControlled = true;
+          return;
+        }
         if (refreshing) return;
-        if (!isBrewTimerRunning()) {
+        if (!isBrewTimerRunning() && !pendingBrew) {
           refreshing = true;
         }
         reloadForServiceWorkerUpdate();

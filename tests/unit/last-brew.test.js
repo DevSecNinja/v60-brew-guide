@@ -185,6 +185,7 @@ describe('V60 Recipe — Last Brew Persistence', () => {
 
       jest.advanceTimersByTime(3000);
 
+      doc.getElementById('btnDiscardResult').click();
       const btn = doc.getElementById('btnBrewAgain');
       btn.click();
 

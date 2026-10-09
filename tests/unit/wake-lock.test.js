@@ -499,6 +499,7 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
       selectRow(250);
       completeBrew();
 
+      doc.getElementById('btnDiscardResult').click();
       window.requestWakeLock = () => {
         wakeLockCallCount++;
         return Promise.resolve(false);
