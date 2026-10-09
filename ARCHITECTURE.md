@@ -38,9 +38,27 @@ Everything lives in one `index.html` with inline `<style>` and `<script>` blocks
 
 ## Application Sections
 
-The primary brewing surfaces are:
+### Numbered, progressively revealed journey
 
-### Brewing setup
+The single document follows introduction, recipe selection, scale/coffee setup,
+water preparation, brewing, and results, in that DOM order. All controls remain
+mounted: disclosure uses `hidden` on stage containers and native `<details>` for
+optional content. The full recipe table and the six-step brew grid are secondary
+disclosures rather than competing with the focused action.
+
+`setupConfirmed` and `waterConfirmed` are memory-only preparation gates. New recipe
+selection opens setup; its explicit confirmation reveals water preparation, whose
+confirmation reveals brewing. Changing equipment requires setup confirmation again.
+Reset or Brew another one returns to water preparation. Ratio-only changes preserve
+completed preparation and existing gates when no brew has started. Reload restores
+recipes and preferences, not gates, running clocks or pending results.
+
+`focusJourneyStage` moves focus to the next stage heading and scrolls it into view
+on explicit transitions, respecting reduced motion. Completion focuses results.
+Lock explanations sit within affected groups. `v60_intro_open` remembers the
+introductory disclosure, which defaults open for a fresh, unselected session.
+
+### Scale setup
 
 Persisted `v60_setup` preferences select a generic or K112 scale, K112 manual or
 automatic hardware mode, app or scale timing, and a zero/three-second app start
@@ -49,24 +67,27 @@ to the scale or infers actual measurements from recipe targets. Setup guidance
 comes from the linked K112 manual; automatic mode is explicitly experimental for
 pulse pours.
 
-### 1. Header
+### Header
 Static branding with a link to James Hoffmann's original video.
 
-### 2. Brew Steps (interactive)
-A focused current-step view plus the existing six-step guide, populated by table,
+### Brew steps
+A focused current-step view plus a collapsible six-step guide, populated by table,
 dose, favorite, shared-link, or last-brew selection. App timing shows cumulative
 targets, planned increments, elapsed time, step countdown and next action. Scale
 timing hides the interactive steps and displays a static reference timeline, with
 an explicit session start/finish and no app brew clock.
 
-### 3. Ratio Slider
+### Ratio slider
 An `<input type="range">` (1:14 to 1:18, step 0.1) that recalculates the entire recipe table on every `input` event. Features:
 - **Reset button** — appears only when the slider is away from the default.
 - **Dose input** — builds custom whole-gram water recipes from a 0.1g coffee dose.
   Supported water remains 100-500g; invalid combinations produce a visible error.
   Dose-based recipes retain coffee when ratio changes; table recipes retain water.
+Each input event performs one table rebuild with a single favorite-key snapshot.
+URL updates are debounced for slider input, flushed on change/share, and skipped
+when unchanged. Sharing builds the URL directly even if browser address updates fail.
 
-### 4. Recipe Table
+### Recipe table
 A dynamically generated `<table>` with rows from 100g to 500g water in 10g increments. Columns: Water, Coffee (1 decimal), Bloom (20% of water), Pour 1 (40% of water), Pour 2 (60% of water), Pour 3 (80% of water), Pour 4 (100% of water). The 250g row is permanently highlighted as the classic recipe. Clicking a row selects it and loads its values into the brew steps.
 
 ## Brew Step State Machine
@@ -125,7 +146,8 @@ Derived from James Hoffmann's improved V60 technique timing:
 include `ratio` and a `basis` (`water` or `dose`). Custom shares add `coffee` to
 the existing ratio/water URL format. Dose favorites have an additional dose key
 suffix, preserving legacy water/ratio favorite keys without collisions. Legacy
-favorites and last brews are restored as water-first recipes.
+favorites and last brews are restored as water-first recipes. Invalid favorite
+entries are filtered with a visible warning rather than aborting initialization.
 
 Completing a brew snapshots its recipe, equipment/mode, timing source and estimated
 temperature target. The result form requires actual water and a valid `m:ss` time;
@@ -138,7 +160,10 @@ Repeat uses the original recipe and setup, not the actual-water result.
 Controls that would mutate a running recipe or an unsaved result are disabled.
 Reset explicitly clears current timers/results; Save or Skip saving unlocks the
 next brew. Storage failures are visible and failed saves preserve the form.
-Malformed history is not overwritten. History is local-only with individual
+History recipe snapshots are validated and normalized through `makeRecipe` before
+rendering; stored free-form values are escaped. Malformed history is not overwritten.
+An explicit, confirmed recovery action removes only the history key and retains
+current unsaved inputs, setup and favorites. History is local-only with individual
 deletion, no implicit retention cutoff, backend or new runtime dependencies.
 
 ## Styling & Theming

@@ -38,7 +38,7 @@ describe('V60 Recipe Calculator — Favorites Feature', () => {
 
     test('favorites section is hidden initially (no favorites)', () => {
       const section = doc.getElementById('favoritesSection');
-      expect(section.style.display).toBe('none');
+      expect(section.hidden).toBe(true);
     });
 
     test('favorites list container exists', () => {
@@ -205,14 +205,14 @@ describe('V60 Recipe Calculator — Favorites Feature', () => {
     test('favorites section is shown when favorites exist', () => {
       window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
       const section = doc.getElementById('favoritesSection');
-      expect(section.style.display).not.toBe('none');
+      expect(section.hidden).toBe(false);
     });
 
     test('favorites section is hidden when all favorites are removed', () => {
       window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
       window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
       const section = doc.getElementById('favoritesSection');
-      expect(section.style.display).toBe('none');
+      expect(section.hidden).toBe(true);
     });
 
     test('favorite card is rendered for each favorite', () => {
@@ -310,7 +310,7 @@ describe('V60 Recipe Calculator — Favorites Feature', () => {
       favBtn.click();
 
       const stepsGrid = doc.getElementById('stepsGrid');
-      expect(stepsGrid.style.display).toBe('none');
+      expect(stepsGrid.hidden).toBe(true);
     });
 
     test('favorite button reflects state after page reload', () => {

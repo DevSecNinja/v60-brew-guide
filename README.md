@@ -22,7 +22,23 @@ A simple, static V60 pour-over coffee brew guide based on [James Hoffmann's Ulti
 
 ## Brewing with a scale
 
-Choose **Any scale** or **Maestri House K112** in *Your brewing setup*. The default
+The single-page journey follows six numbered stages:
+
+1. **New to V60?** introduces the equipment, without making you configure a scale first.
+2. **Choose your recipe** using a quick water amount, a weighed dose, a favorite,
+   or the collapsible full reference table.
+3. **Prepare your scale and coffee** using one equipment-specific checklist.
+4. **Prepare your water**, optionally using the boil-based cooling timer.
+5. **Brew** with a focused current action; expand *All brew steps* only when needed.
+6. **Record the result** or explicitly skip saving.
+
+Setup appears after recipe selection, water after setup confirmation, and brewing
+after water confirmation. Buttons move focus to the next stage rather than jumping
+to the page top. The introductory dropdown remembers whether you left it open.
+Returning users can continue with their restored recipe or repeat a history entry;
+reloads still require fresh preparation confirmation and never resume an old clock.
+
+Choose **Any scale** or **Maestri House K112** in stage 3. The default
 remains any scale with app-guided timing. K112 owners can choose **Manual** or
 **Automatic (try it out)** independently of which device supplies the clock.
 The setup and timer-start preference are remembered on this browser.
@@ -60,11 +76,14 @@ Enter coffee in 0.1g increments under the ratio slider and choose *Use this dose
 Water rounds to whole grams and must remain within the existing 100-500g brew
 range. For example, 15.2g at 1:16.7 produces a 254g water target. Changing the ratio
 keeps the dose fixed. Table-selected recipes instead keep water fixed.
+Ratio-only adjustments before brewing preserve completed water preparation.
 
 After brewing, confirm the dose, enter actual water poured, and confirm or enter
 the finish time as `m:ss`. Notes are optional. Choose *Save brew* or *Skip saving*
 before brewing again. Recipe/setup changes are locked during an active brew or
 while results await saving; *Reset* explicitly discards the current session.
+Reset and *Brew another one* return to water preparation, keeping the chosen
+recipe and equipment. Change a recipe or equipment to revisit scale setup.
 Saved history can repeat the original recipe/setup or delete an individual brew.
 No automatic extraction or taste diagnosis is inferred from these measurements.
 
@@ -72,6 +91,10 @@ History, favorites, and preferences stay in local browser storage and work offli
 after the app has been cached. They do not sync between devices. Storage failures
 are displayed, and a failed history save leaves the result form available to retry.
 Clearing browser data removes saved information.
+Unreadable history is not automatically overwritten. *Clear unreadable history*
+offers a confirmed, history-only reset that preserves favorites, setup and an
+unsaved result. Malformed favorite entries are excluded with a warning so they
+cannot prevent the app from starting.
 
 ## Tech
 

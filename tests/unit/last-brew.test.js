@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
+const { confirmPreparation } = require('../helpers/brew-journey');
 
 // Load the HTML file
 const html = fs.readFileSync(path.resolve(__dirname, '../../index.html'), 'utf8');
@@ -82,6 +83,7 @@ describe('V60 Recipe — Last Brew Persistence', () => {
       const rows = doc.querySelectorAll('#recipeTableBody tr');
       const row = Array.from(rows).find(r => r.dataset.water === String(waterAmount));
       row.click();
+      confirmPreparation(window);
       // Step 0 needs 3 clicks: available → countdown → running → completed
       const step0 = doc.getElementById('step0');
       step0.click(); // countdown
@@ -110,6 +112,7 @@ describe('V60 Recipe — Last Brew Persistence', () => {
       const rows = doc.querySelectorAll('#recipeTableBody tr');
       const row = Array.from(rows).find(r => r.dataset.water === '300');
       row.click();
+      confirmPreparation(window);
       // Step 0: 3 clicks (available → countdown → running → completed)
       const step0 = doc.getElementById('step0');
       step0.click(); // countdown
@@ -144,6 +147,7 @@ describe('V60 Recipe — Last Brew Persistence', () => {
       const rows = doc.querySelectorAll('#recipeTableBody tr');
       const row = Array.from(rows).find(r => r.dataset.water === '250');
       row.click();
+      confirmPreparation(window);
       // Step 0: 3 clicks (available → countdown → running → completed)
       const step0 = doc.getElementById('step0');
       step0.click(); // countdown
@@ -172,6 +176,7 @@ describe('V60 Recipe — Last Brew Persistence', () => {
       const rows = doc.querySelectorAll('#recipeTableBody tr');
       const row = Array.from(rows).find(r => r.dataset.water === '250');
       row.click();
+      confirmPreparation(window);
       // Step 0: 3 clicks (available → countdown → running → completed)
       const step0 = doc.getElementById('step0');
       step0.click(); // countdown
@@ -324,7 +329,7 @@ describe('V60 Recipe — Last Brew Persistence', () => {
 
       expect(doc2.getElementById('temperatureEstimatorVolume').value).toBe('1000');
       expect(doc2.getElementById('temperatureEstimatorTarget').value).toBe('');
-      expect(doc2.getElementById('temperaturePrepStep').style.display).toBe('none');
+      expect(doc2.getElementById('temperaturePrepStep').hidden).toBe(true);
       expect(doc2.getElementById('step0').classList.contains('available')).toBe(true);
 
       dom2.window.close();

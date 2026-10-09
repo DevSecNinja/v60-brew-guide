@@ -153,11 +153,14 @@ describe('HTML Structure', () => {
     expect(texts[5]).toContain('Finish');
   });
 
-  test('temperature estimator is a collapsed card after the intro', () => {
+  test('intro precedes recipe, setup, water and brewing stages', () => {
     const intro = doc.getElementById('brewIntro');
     const estimator = doc.getElementById('temperatureEstimator');
 
-    expect(intro.nextElementSibling).toBe(estimator);
+    expect(doc.querySelector('main').firstElementChild).toBe(intro);
+    expect(estimator.closest('section').id).toBe('waterStage');
+    const stages = Array.from(doc.querySelectorAll('main > section[id]')).map(stage => stage.id);
+    expect(stages).toEqual(['recipeStage', 'setupStage', 'waterStage', 'brewStage', 'brewResult']);
     expect(estimator.tagName).toBe('DETAILS');
     expect(estimator.hasAttribute('open')).toBe(false);
   });

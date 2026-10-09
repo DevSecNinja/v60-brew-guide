@@ -1,6 +1,11 @@
 const { test, expect } = require('@playwright/test');
 const { startStaticServer } = require('../helpers/static-server');
 
+async function prepareWater(page) {
+  await page.locator('#btnSetupReady').click();
+  await page.locator('#btnWaterReady').click();
+}
+
 test.describe('Scale companion on mobile', () => {
   test.use({ serviceWorkers: 'block' });
 
@@ -25,9 +30,10 @@ test.describe('Scale companion on mobile', () => {
     page.on('pageerror', error => errors.push(error.message));
     await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
     await page.clock.pauseAt(new Date('2026-01-01T00:00:01Z'));
+    await page.locator('[data-quick-water="250"]').click();
     await page.locator('#scaleType').selectOption('k112');
     await page.locator('#startDelay').selectOption('0');
-    await page.locator('#recipeTableBody tr[data-water="250"]').click();
+    await prepareWater(page);
     await page.locator('#btnFocusAction').click();
     await page.clock.fastForward(70000);
     await expect(page.locator('#focusTarget')).toHaveText('Pour to 150 g total');
@@ -53,10 +59,11 @@ test.describe('Scale companion on mobile', () => {
 
   for (const mode of ['manual', 'auto']) {
     test(`K112 ${mode} scale timing logs reported time without an app clock`, async ({ page }) => {
+      await page.locator('[data-quick-water="250"]').click();
       await page.locator('#scaleType').selectOption('k112');
       await page.locator('#k112Mode').selectOption(mode);
       await page.locator('#timerSource').selectOption('scale');
-      await page.locator('#recipeTableBody tr[data-water="250"]').click();
+      await prepareWater(page);
       await expect(page.locator('#stepsGrid')).not.toBeVisible();
       await expect(page.locator('#brewTimeline')).toContainText('150 g total');
       await page.locator('#btnFocusAction').click();
@@ -77,8 +84,9 @@ test.describe('Scale companion on mobile', () => {
 
   test('generic scale timeline works at narrow viewport widths', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 700 });
+    await page.locator('[data-quick-water="250"]').click();
     await page.locator('#timerSource').selectOption('scale');
-    await page.locator('#recipeTableBody tr[data-water="250"]').click();
+    await prepareWater(page);
     await expect(page.locator('#k112ModeField')).not.toBeVisible();
     await expect(page.locator('#scaleReference')).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -91,7 +99,8 @@ test.describe('Scale companion on mobile', () => {
   test('countdown start excludes preparation from elapsed brew time', async ({ page }) => {
     await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
     await page.clock.pauseAt(new Date('2026-01-01T00:00:01Z'));
-    await page.locator('#recipeTableBody tr[data-water="250"]').click();
+    await page.locator('[data-quick-water="250"]').click();
+    await prepareWater(page);
     await page.locator('#btnFocusAction').click();
     await expect(page.locator('#focusClock')).toHaveText('Start pouring in 3');
     await page.clock.fastForward(3000);
@@ -100,6 +109,67 @@ test.describe('Scale companion on mobile', () => {
     await expect(page.locator('#focusTarget')).toHaveText('Pour to 100 g total');
     await expect(page.locator('#focusClock')).toContainText('Elapsed 0:45');
   });
+
+  test('new users follow numbered stages and receive focus at each transition', async ({ page }, testInfo) => {
+    await expect(page.locator('main > :first-child')).toHaveAttribute('id', 'brewIntro');
+    await expect(page.locator('#brewIntro')).toHaveAttribute('open', '');
+    await expect(page.locator('#setupStage')).not.toBeVisible();
+    await expect(page.locator('#waterStage')).not.toBeVisible();
+    await expect(page.locator('#brewStage')).not.toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath('journey-start.png') });
+    await page.locator('#btnIntroNext').click();
+    await expect(page.locator('#recipeHeading')).toBeFocused();
+    await page.locator('[data-quick-water="250"]').click();
+    await expect(page.locator('#setupHeading')).toBeFocused();
+    await expect(page.locator('#waterStage')).not.toBeVisible();
+    await page.locator('#btnSetupReady').click();
+    await expect(page.locator('#waterHeading')).toBeFocused();
+    await expect(page.locator('#brewStage')).not.toBeVisible();
+    await page.locator('#btnWaterReady').click();
+    await expect(page.locator('#brewHeading')).toBeFocused();
+    await expect(page.locator('#allBrewSteps')).not.toHaveAttribute('open', '');
+    await page.locator('#btnFocusAction').click();
+    await page.locator('#btnFocusAction').click();
+    await page.clock.install();
+    await page.clock.fastForward(195000);
+    await page.locator('#btnFocusAction').click();
+    await expect(page.locator('#resultHeading')).toBeFocused();
+    await expect(page.locator('#btnBrewAgain')).toBeDisabled();
+    await page.locator('#btnDiscardResult').click();
+    await page.clock.fastForward(3000);
+    await page.locator('#btnBrewAgain').click();
+    await expect(page.locator('#waterHeading')).toBeFocused();
+    await expect(page.locator('#brewStage')).not.toBeVisible();
+    await page.reload();
+    await expect(page.locator('#brewIntro')).not.toHaveAttribute('open', '');
+    await expect(page.locator('#setupStage')).toBeVisible();
+    await expect(page.locator('#waterStage')).not.toBeVisible();
+  });
+
+  test('optional water timer gates brewing and ratio edits preserve completed preparation', async ({ page }) => {
+    await page.locator('[data-quick-water="250"]').click();
+    await page.locator('#btnSetupReady').click();
+    await page.locator('#temperatureEstimator > summary').click();
+    await page.locator('#temperatureEstimatorTarget').selectOption('94');
+    await expect(page.locator('#btnWaterReady')).toBeDisabled();
+    await page.locator('#temperaturePrepStep').click();
+    await page.locator('#temperaturePrepStep').click();
+    await page.locator('#btnWaterReady').click();
+    await page.locator('#recipeChoices > summary').click();
+    await page.locator('#ratioSlider').fill('16');
+    await expect(page.locator('#temperaturePrepStep')).toHaveClass(/completed/);
+    await expect(page.locator('#btnFocusAction')).toBeEnabled();
+    await expect(page.locator('#brewStage')).toBeVisible();
+  });
+
+  test('the full recipe table can be selected by keyboard', async ({ page }) => {
+    await page.locator('#recipeReference > summary').click();
+    const recipe = page.getByRole('button', { name: 'Use 260 g water recipe', exact: true });
+    await recipe.focus();
+    await recipe.press('Enter');
+    await expect(page.locator('#journeyRecipeSummary')).toContainText('260 g water');
+    await expect(page.locator('#setupHeading')).toBeFocused();
+  });
 });
 
 test('custom recipe and scale setup restore offline', async ({ page }) => {
@@ -107,11 +177,11 @@ test('custom recipe and scale setup restore offline', async ({ page }) => {
   try {
     await page.goto(server.url);
     await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+    await page.locator('#coffeeDose').fill('15.2');
+    await page.locator('#btnUseDose').click();
     await page.locator('#scaleType').selectOption('k112');
     await page.locator('#k112Mode').selectOption('auto');
     await page.locator('#timerSource').selectOption('scale');
-    await page.locator('#coffeeDose').fill('15.2');
-    await page.locator('#btnUseDose').click();
     await page.locator('#btnFavoriteRecipe').click();
     await expect.poll(() => page.evaluate(async () => {
       const response = await caches.match(new URL('index.html', location.href).href);
@@ -122,6 +192,7 @@ test('custom recipe and scale setup restore offline', async ({ page }) => {
     await expect(page.locator('#k112Mode')).toHaveValue('auto');
     await expect(page.locator('#brewRecipeLabel')).toContainText('254g water / 15.2g coffee');
     await expect(page.locator('#btnFavoriteRecipe')).toHaveText('Remove favorite');
+    await prepareWater(page);
     await page.locator('#btnFocusAction').click();
     await page.locator('#btnFocusAction').click();
     await page.locator('#resultTime').fill('3:05');

@@ -79,8 +79,7 @@ async function waitForAppShellCached(page) {
 
 async function expectAppShellRendered(page) {
   await expect(page.getByRole('heading', { name: 'V60 Brew Guide' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Coffee-to-Water Ratio' })).toBeVisible();
-  await expect(page.locator('input[type="range"]')).toBeVisible();
+  await expect(page.locator('#recipeHeading')).toBeVisible();
   await expect(page.locator('table tbody tr')).toHaveCount(41);
 }
 
@@ -103,6 +102,7 @@ test.describe('Page load', () => {
 
   test('250 g row is highlighted by default', async ({ page }) => {
     await page.goto('/', { waitUntil: 'networkidle' });
+    await page.locator('#recipeReference > summary').click();
     // The 250 g row is the default highlighted row; the app marks it with the
     // --highlight-bg/border CSS custom properties applied via a class or style.
     // We verify it is visually distinct by checking its background color differs
@@ -215,24 +215,27 @@ test.describe('Ratio slider', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('Brew timer', () => {
-  test('tapping a recipe row reveals the brew steps section', async ({ page }) => {
+  test('tapping a recipe row reveals setup before the brew stage', async ({ page }) => {
     await page.goto('/');
+    await page.locator('#recipeReference > summary').click();
 
     // Tap the first data row in the recipe table to select a recipe.
     const firstRow = page.locator('table tbody tr').first();
     await firstRow.tap();
 
-    // The brew-steps section should now be visible.
-    const brewSection = page.locator('#brew-steps, [id*="brew"], [class*="brew-steps"]').first();
-    await expect(brewSection).toBeVisible({ timeout: 3000 });
+    await expect(page.locator('#setupStage')).toBeVisible();
+    await expect(page.locator('#brewStage')).not.toBeVisible();
   });
 
-  test('first brew step becomes available after selecting a recipe', async ({ page }) => {
+  test('first brew step becomes available after preparing recipe and water', async ({ page }) => {
     await page.goto('/');
-    await page.locator('table tbody tr').first().tap();
+    await page.locator('[data-quick-water="250"]').click();
+    await page.locator('#btnSetupReady').click();
+    await page.locator('#btnWaterReady').click();
+    await page.locator('#allBrewSteps > summary').click();
 
     // The first step card should show the "available" state (▶ tap to start).
-    const firstStep = page.locator('.step, [class*="step"]').first();
+    const firstStep = page.locator('#step0');
     await expect(firstStep).toBeVisible({ timeout: 3000 });
   });
 });

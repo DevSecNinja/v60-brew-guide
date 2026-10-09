@@ -14,6 +14,10 @@ const CONTENT_TYPES = {
   '.webmanifest': 'application/manifest+json; charset=utf-8',
 };
 
+/**
+ * Serve an isolated test origin and expose an idempotent close that also ends
+ * keep-alive sockets, so offline checks simulate a real server outage.
+ */
 async function startStaticServer() {
   const sockets = new Set();
   const server = http.createServer((request, response) => {

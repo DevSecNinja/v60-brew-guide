@@ -1872,6 +1872,16 @@
     .history-entry { border-top: 1px solid var(--accent); padding: 1rem 0; overflow-wrap: anywhere; }
     .history-entry p { margin: 0.4rem 0; white-space: pre-wrap; }
     .step:focus-visible, .companion-button:focus-visible { outline: 3px solid var(--selected-border); outline-offset: 3px; }
+    .journey-heading { scroll-margin-top: 1rem; }
+    .journey-status { margin: 0.75rem 0; font-weight: 600; }
+    .journey-lock { color: var(--text-secondary); margin: 0.75rem 0; }
+    .recipe-choices > section { box-shadow: none; border: 0; padding: 1rem 0; margin: 0; }
+    .recipe-choices summary, .journey-details > summary { cursor: pointer; padding: 0.75rem 0; font-weight: 600; }
+    .journey-details { margin-top: 0.75rem; }
+    .journey-heading:focus { outline: 2px solid var(--selected-border); outline-offset: 4px; }
+    .brew-intro .intro-body ul { padding-left: 1.25rem; margin: 0.5rem 0 0.75rem; }
+    .brew-intro .intro-body li + li { margin-top: 0.4rem; }
+    .btn-water-recipe { font: inherit; color: inherit; border: 0; background: transparent; min-height: 44px; text-decoration: underline; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -1896,10 +1906,99 @@
   </header>
 
   <main>
+    <details class="brew-intro" id="brewIntro">
+      <summary>1 — New to V60? Start here</summary>
+      <div class="intro-body">
+        <p>A V60 brews coffee by pouring water through ground coffee in a paper filter. This guide helps you choose a recipe, prepare your equipment, then follow each pour.</p>
+        <p><strong>What you need</strong></p>
+        <ul>
+          <li>A V60 dripper, matching paper filter, and a carafe or mug.</li>
+          <li>A scale that reads in grams (0.1 g resolution is ideal). A built-in timer is optional: the app can keep time.</li>
+          <li>Ground coffee and a kettle, ideally a gooseneck for controlled pouring.</li>
+        </ul>
+        <p>Start with the 250 g recipe if you are unsure. You can adjust the ratio to taste. Scale setup and water preparation come next; there is no need to start a timer yet.</p>
+        <button type="button" id="btnIntroNext" class="companion-button">Choose a recipe</button>
+      </div>
+    </details>
     <p id="storageWarning" class="companion-message" role="status" hidden></p>
     <p id="companionMessage" class="companion-message" role="status" hidden></p>
-    <section class="companion-card" aria-labelledby="setupHeading">
-      <h2 id="setupHeading">Your brewing setup</h2>
+    <section id="recipeStage" class="companion-card" aria-labelledby="recipeHeading">
+      <h2 id="recipeHeading" class="journey-heading" tabindex="-1">2 — Choose your recipe</h2>
+      <p id="journeyRecipeSummary" class="journey-status">Choose a water amount or enter the coffee you have weighed.</p>
+      <p class="journey-lock" data-journey-lock hidden></p>
+      <details id="recipeChoices" class="recipe-choices" open>
+        <summary>Choose or change a recipe</summary>
+        <div class="companion-actions">
+          <button type="button" class="companion-button" data-quick-water="250">250 g — start here</button>
+          <button type="button" class="companion-button" data-quick-water="300">300 g water</button>
+          <button type="button" class="companion-button" data-quick-water="500">500 g water</button>
+        </div>
+        <section class="slider-section">
+          <h3>Coffee-to-Water Ratio</h3>
+          <div class="slider-wrapper">
+            <label for="ratioSlider">1 :</label>
+            <div class="slider-track-container">
+              <input type="range" id="ratioSlider" min="14" max="18" step="0.1" value="16.7">
+            </div>
+            <span class="ratio-value" id="ratioDisplay">1:16.7</span>
+          </div>
+          <div class="slider-bottom-row">
+            <div class="slider-labels">
+              <span>1:14 (stronger)</span>
+              <span>1:18 (lighter)</span>
+            </div>
+            <button type="button" class="btn-reset-ratio hidden" id="btnResetRatio">Reset to 1:16.7</button>
+          </div>
+          <form id="doseForm">
+            <div class="companion-fields">
+              <div>
+                <label for="coffeeDose">Or start with the coffee you weighed (g)</label>
+                <input id="coffeeDose" type="number" min="0.1" max="35.7" step="0.1" placeholder="15.2" aria-describedby="doseHelp" required>
+              </div>
+            </div>
+            <p id="doseHelp" class="companion-note">Uses your chosen ratio. Water is rounded to whole grams; supported brews are 100-500 g of water. Changing the ratio keeps your dose fixed.</p>
+            <button type="submit" id="btnUseDose" class="companion-button">Use this dose</button>
+            <p id="doseFeedback" role="status"></p>
+          </form>
+        </section>
+        <section class="favorites-section" id="favoritesSection" hidden>
+          <h3>My Favorites</h3>
+          <p class="favorites-hint">Choose a saved recipe, edit its note, or drag to reorder.</p>
+          <div id="favoritesList" class="favorites-list"></div>
+        </section>
+        <details id="recipeReference" class="journey-details">
+          <summary>Browse all water-first recipes (100-500 g)</summary>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Water (g)</th>
+                  <th scope="col">Coffee (g)</th>
+                  <th scope="col">Bloom (g)</th>
+                  <th scope="col">Pour 1 to (g)</th>
+                  <th scope="col">Pour 2 to (g)</th>
+                  <th scope="col">Pour 3 to (g)</th>
+                  <th scope="col">Pour 4 to (g)</th>
+                  <th scope="col"><abbr title="Favorite">♡</abbr></th>
+                </tr>
+              </thead>
+              <tbody id="recipeTableBody"></tbody>
+            </table>
+          </div>
+        </details>
+      </details>
+      <div class="companion-actions">
+        <button type="button" id="btnRecipeNext" class="companion-button" hidden>Continue to scale setup</button>
+        <button type="button" class="btn-reset-brew" id="btnFavoriteRecipe" hidden>Save favorite</button>
+        <button type="button" class="btn-reset-brew" id="btnShareRecipe" title="Share this recipe" hidden>Share</button>
+      </div>
+    </section>
+    <section id="setupStage" class="companion-card" aria-labelledby="setupHeading" hidden>
+      <h2 id="setupHeading" class="journey-heading" tabindex="-1">3 — Prepare your scale and coffee</h2>
+      <p id="setupSummary" class="journey-status"></p>
+      <p class="journey-lock" data-journey-lock hidden></p>
+      <details id="setupControls" class="journey-details" open>
+      <summary>Equipment, timing, and preparation</summary>
       <p class="companion-note">Use any scale, or get button-by-button help for the Maestri House K112. No connection or automatic weight readings are required.</p>
       <div class="companion-fields">
         <div>
@@ -1932,30 +2031,21 @@
         </div>
       </div>
       <p id="modeGuidance" class="companion-note"></p>
-      <details id="scaleSetup">
-        <summary>Before you pour</summary>
+      <p id="autoModeGuidance" class="companion-message" hidden></p>
+      <details id="scaleSetup" open>
+        <summary>Scale preparation checklist</summary>
         <ol id="scaleChecklist"></ol>
         <p id="k112Safety" class="companion-note" hidden>Use the silicone pad, keep the charging port dry, and do not brew while charging. The 2,000 g limit includes your carafe, dripper, coffee and water, even after taring.
           <a href="https://cdn.shopify.com/s/files/1/0596/5335/7750/files/K112_EN_DE_Manual.pdf?v=1750065226" target="_blank" rel="noopener">K112 manual</a>
         </p>
       </details>
+      </details>
+      <button type="button" id="btnSetupReady" class="companion-button">Scale and coffee ready — prepare water</button>
     </section>
-    <details class="brew-intro" id="brewIntro">
-      <summary>New to V60? Start here</summary>
-      <div class="intro-body">
-        <p>This is a step-by-step pour-over brew guide based on <a href="https://www.youtube.com/watch?v=1oB1oDrDkHM" target="_blank" rel="noopener">James Hoffmann's Ultimate V60 Technique</a>. Pick a recipe from the table, follow the timed steps, and adjust the ratio to taste.</p>
-        <p><strong>Before you brew</strong></p>
-        <ol>
-          <li>Use a <strong>Hario V60</strong> dripper and decanter — a <em>V60 Drip Decanter 02</em> works great for 1–2 cups.</li>
-          <li>Weigh everything on an <strong>accurate scale</strong> (0.1 g resolution, with a timer).</li>
-          <li><strong>Fold the paper filter</strong> along its seam and place it in the dripper.</li>
-          <li><strong>Rinse the filter and preheat the decanter</strong>: pour hot water through the paper until the decanter fills up a bit, then discard that water. This removes the paper taste and warms everything up.</li>
-          <li>Grind your coffee <strong>medium-coarse</strong> and use water <strong>just off the boil</strong> (~95 °C). No temperature kettle? Open the boil-based estimator just below.</li>
-        </ol>
-        <p>Then tap a row in the recipe table below to load the brew steps and start your timer.</p>
-      </div>
-    </details>
-
+    <section id="waterStage" class="companion-card" aria-labelledby="waterHeading" hidden>
+      <h2 id="waterHeading" class="journey-heading" tabindex="-1">4 — Prepare your water</h2>
+      <p class="companion-note">Bring your water to brewing temperature. With a temperature-controlled kettle you can continue when ready; otherwise use the optional boil-based cooling estimate.</p>
+      <p class="journey-lock" data-journey-lock hidden></p>
     <details class="brew-intro temperature-estimator-card" id="temperatureEstimator">
       <summary>Boil-Based Temperature Estimator</summary>
       <div class="intro-body temperature-body">
@@ -1994,34 +2084,33 @@
           <p class="temperature-note">Taste is the best guide: if the cup is sharp or under-extracted, try a hotter target next time; if it tastes bitter or roasty, try a cooler one.</p>
         </div>
         <ul class="temperature-timeline" id="temperatureEstimatorTimeline"></ul>
-        <p class="temperature-note">Approximate guide for a stainless steel gooseneck kettle in a typical room. A colder kitchen usually needs a little more wait time; a warmer room usually cools a little faster.</p>
+        <p class="temperature-note">Approximate guide for a stainless steel gooseneck kettle in a typical room. A colder room generally cools the water faster; a warmer room generally cools it more slowly. Use a thermometer when accuracy matters.</p>
       </div>
     </details>
 
-    <section class="brew-steps">
-      <div class="brew-steps-header">
-        <div>
-          <h2>Brew Steps</h2>
-          <div class="brew-selected-recipe" id="brewRecipeLabel">Select a recipe from the table below</div>
-          <div class="wake-lock-status" id="wakeLockStatus" aria-live="polite">Screen lock prevention: Off</div>
-        </div>
-        <div class="brew-actions">
-          <button type="button" class="btn-reset-brew" id="btnFavoriteRecipe" hidden>Save favorite</button>
-          <button type="button" class="btn-reset-brew" id="btnShareRecipe" title="Share this recipe" hidden>Share</button>
-          <button type="button" class="btn-reset-brew" id="btnResetBrew" title="Reset all brew steps">Reset</button>
-        </div>
-      </div>
-      <div id="noRecipeNotice" class="no-recipe-notice">
-        👇 Tap a row in the recipe table to load a brew
-      </div>
-      <button type="button" class="brew-prep-step" id="temperaturePrepStep" style="display:none;" aria-hidden="true">
+      <button type="button" class="brew-prep-step" id="temperaturePrepStep" hidden aria-hidden="true">
         <span class="brew-prep-step-copy">
-          <span class="brew-prep-step-label">0 — Water</span>
+          <span class="brew-prep-step-label">Water cooling timer</span>
           <span class="step-detail" id="temperaturePrepDetail">Bring the water to a <strong>full boil</strong>, then wait before you bloom.</span>
           <span class="brew-prep-step-hint" id="temperaturePrepHint"></span>
         </span>
         <span class="brew-prep-step-timer" id="temperaturePrepTimer">0:00</span>
       </button>
+      <p id="waterReadyHint" class="companion-note"></p>
+      <button type="button" id="btnWaterReady" class="companion-button">Water ready — continue to brew</button>
+    </section>
+    <section id="brewStage" class="brew-steps" aria-labelledby="brewHeading" hidden>
+      <div class="brew-steps-header">
+        <div>
+          <h2 id="brewHeading" class="journey-heading" tabindex="-1">5 — Brew</h2>
+          <div class="brew-selected-recipe" id="brewRecipeLabel">Choose a recipe to begin</div>
+          <div class="wake-lock-status" id="wakeLockStatus" aria-live="polite">Screen lock prevention: Off</div>
+        </div>
+        <div class="brew-actions">
+          <button type="button" class="btn-reset-brew" id="btnResetBrew" title="Reset the current brew" disabled>Reset</button>
+        </div>
+      </div>
+      <p id="brewStartGuidance" class="companion-note"></p>
       <div id="brewFocus" class="brew-focus" hidden>
         <div id="focusStage" aria-live="polite"></div>
         <strong id="focusTarget" class="focus-target"></strong>
@@ -2037,7 +2126,9 @@
         <p class="companion-note">Read elapsed time on your scale. This timeline does not advance automatically or detect pours.</p>
         <ol id="brewTimeline" class="brew-timeline"></ol>
       </div>
-      <div class="steps-grid" id="stepsGrid" style="display:none;">
+      <details id="allBrewSteps" class="journey-details">
+        <summary>All brew steps and manual advance</summary>
+      <div class="steps-grid" id="stepsGrid" hidden>
         <div class="step locked" id="step0" data-step="0">
           <div class="step-label">1 — Bloom</div>
           <div class="step-detail" id="step0Detail">Pour <strong>--g</strong> water<br>Swirl, wait 45s</div>
@@ -2075,6 +2166,7 @@
           <div class="step-hint" id="step5Hint"></div>
         </div>
       </div>
+      </details>
       <div class="brew-complete" id="brewComplete">
         <div class="brew-complete-icon" id="brewCompleteIcon" role="img" aria-label="Coffee cup with steam">
           <div class="steam-container">
@@ -2090,7 +2182,7 @@
     </section>
 
     <section id="brewResult" class="companion-card" aria-labelledby="resultHeading" hidden>
-      <h2 id="resultHeading">How did it brew?</h2>
+      <h2 id="resultHeading" class="journey-heading" tabindex="-1">6 — How did it brew?</h2>
       <p class="companion-note">Confirm the measurements before saving. Water means total water poured, not the drink left in the carafe.</p>
       <form id="brewResultForm">
         <div class="companion-fields">
@@ -2110,68 +2202,14 @@
       </form>
     </section>
 
-    <section class="slider-section">
-      <h2>Coffee-to-Water Ratio</h2>
-      <div class="slider-wrapper">
-        <label for="ratioSlider">1 :</label>
-        <div class="slider-track-container">
-          <input type="range" id="ratioSlider" min="14" max="18" step="0.1" value="16.7">
-        </div>
-        <span class="ratio-value" id="ratioDisplay">1:16.7</span>
-      </div>
-      <div class="slider-bottom-row">
-        <div class="slider-labels">
-          <span>1:14 (stronger)</span>
-          <span>1:18 (lighter)</span>
-        </div>
-        <button type="button" class="btn-reset-ratio hidden" id="btnResetRatio">Reset to 1:16.7</button>
-      </div>
-      <form id="doseForm">
-        <div class="companion-fields">
-          <div>
-            <label for="coffeeDose">Or start with the coffee you weighed (g)</label>
-            <input id="coffeeDose" type="number" min="0.1" max="35.7" step="0.1" placeholder="15.2" aria-describedby="doseHelp" required>
-          </div>
-        </div>
-        <p id="doseHelp" class="companion-note">Uses the ratio above. Water is rounded to whole grams; supported brews are 100-500 g of water. Changing the ratio keeps your dose fixed.</p>
-        <button type="submit" id="btnUseDose" class="companion-button">Use this dose</button>
-        <p id="doseFeedback" role="status"></p>
-      </form>
-    </section>
-
-    <section class="table-section">
-      <h2>Recipe Reference Table</h2>
-      <p class="table-hint">Tap a row to load it into the brew steps above</p>
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Water (g)</th>
-              <th scope="col">Coffee (g)</th>
-              <th scope="col">Bloom (g)</th>
-              <th scope="col">Pour 1 to (g)</th>
-              <th scope="col">Pour 2 to (g)</th>
-              <th scope="col">Pour 3 to (g)</th>
-              <th scope="col">Pour 4 to (g)</th>
-              <th scope="col"><abbr title="Favorite">♡</abbr></th>
-            </tr>
-          </thead>
-          <tbody id="recipeTableBody">
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="favorites-section" id="favoritesSection" style="display:none;">
-      <h2><span aria-hidden="true">❤️</span> My Favorites</h2>
-      <p class="favorites-hint">Your saved recipes — tap to brew, use ✏ to add or edit a note, drag ☰ to reorder</p>
-      <div id="favoritesList" class="favorites-list"></div>
-    </section>
-
     <section class="companion-card" aria-labelledby="historyHeading">
-      <h2 id="historyHeading">Brew history</h2>
+      <h2 id="historyHeading" class="journey-heading" tabindex="-1">Brew history</h2>
       <p class="companion-note">Saved only in this browser, including offline. Compare your recipes and K112 modes; clearing browser data removes this history.</p>
       <div id="brewHistory"><p>No brews saved yet.</p></div>
+      <div id="historyRecovery" hidden>
+        <p>To save again, you can explicitly clear unreadable brew history. This deletes only history, not favorites, setup, or the result you are entering.</p>
+        <button type="button" id="btnResetHistory" class="companion-button">Clear unreadable history</button>
+      </div>
     </section>
 
     <section class="faq-section">
@@ -2320,7 +2358,6 @@
     const temperaturePrepTimer = document.getElementById('temperaturePrepTimer');
 
     const stepsGrid = document.getElementById('stepsGrid');
-    const noRecipeNotice = document.getElementById('noRecipeNotice');
     const brewRecipeLabel = document.getElementById('brewRecipeLabel');
     const wakeLockStatus = document.getElementById('wakeLockStatus');
     const btnResetBrew = document.getElementById('btnResetBrew');
@@ -2404,7 +2441,7 @@
     function reportStorageError(error) {
       console.warn('Local brew storage unavailable or unreadable:', error);
       byId('storageWarning').hidden = false;
-      byId('storageWarning').textContent = 'Browser storage is unavailable or contains unreadable data. Your brew still works, but changes may not be saved. Keep any results you need before closing this page.';
+      byId('storageWarning').textContent = 'A browser storage operation failed or some saved data could not be read. Your brew still works, but check that results are saved before closing this page.';
     }
 
     function showCompanionMessage(message) {
@@ -2421,7 +2458,12 @@
         reportStorageError(new Error('Invalid favorites'));
         return [];
       }
-      return saved;
+      const valid = saved.filter(favorite => favorite && typeof favorite === 'object' &&
+        !Array.isArray(favorite) && typeof favorite.key === 'string' &&
+        Number.isInteger(favorite.water) && favorite.water >= 100 && favorite.water <= 500 &&
+        parseRatioParam(favorite.ratio) !== null);
+      if (valid.length !== saved.length) reportStorageError(new Error('Unreadable favorite entries were excluded; valid favorites remain available'));
+      return valid;
     }
 
     function saveFavorites(favorites) {
@@ -2599,11 +2641,11 @@
     function renderFavorites() {
       const favorites = loadFavorites();
       if (favorites.length === 0) {
-        favoritesSection.style.display = 'none';
+        favoritesSection.hidden = true;
         return;
       }
 
-      favoritesSection.style.display = '';
+      favoritesSection.hidden = false;
       let html = '';
 
       favorites.forEach((fav) => {
@@ -2726,7 +2768,7 @@
         coffee: card.dataset.favCoffee,
         basis: card.dataset.favBasis
       }, Number(card.dataset.favRatio))) {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        continueFromRecipe();
       }
     }
 
@@ -2794,11 +2836,63 @@
     let brewClockTimer = null;
     let scaleBrewActive = false;
     let pendingBrew = null;
+    let setupConfirmed = false;
+    let waterConfirmed = false;
+    let shareUrlTimer = null;
     const SETUP_KEY = 'v60_setup';
     const HISTORY_KEY = 'v60_history';
     const STEP_ENDS = [45, 70, 90, 110, 125, 180];
     const STEP_NAMES = ['Bloom', 'Pour 1', 'Pour 2', 'Pour 3', 'Pour 4', 'Drawdown'];
     let brewSetup = { scale: 'generic', mode: 'manual', timer: 'app', delay: '3' };
+
+    function focusJourneyStage(id) {
+      const heading = byId(id);
+      if (heading.closest('[hidden]')) return;
+      heading.focus({ preventScroll: true });
+      if (typeof heading.scrollIntoView === 'function') {
+        const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        heading.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
+      }
+    }
+
+    function continueFromRecipe() {
+      byId('brewIntro').open = false;
+      byId('recipeChoices').open = false;
+      focusJourneyStage('setupHeading');
+    }
+
+    function renderJourney() {
+      const locked = isBrewTimerRunning() || Boolean(pendingBrew);
+      const ready = selectedRecipe && setupConfirmed && waterConfirmed;
+      byId('setupStage').hidden = !selectedRecipe;
+      byId('waterStage').hidden = !selectedRecipe || !setupConfirmed;
+      byId('brewStage').hidden = !ready;
+      byId('brewResult').hidden = !pendingBrew;
+      byId('btnRecipeNext').hidden = !selectedRecipe;
+      byId('btnRecipeNext').disabled = locked;
+      byId('btnSetupReady').hidden = setupConfirmed;
+      byId('btnSetupReady').disabled = locked || !selectedRecipe;
+      byId('btnWaterReady').hidden = waterConfirmed;
+      byId('btnWaterReady').disabled = locked || (hasTemperaturePrep() && temperaturePrepState !== 'completed');
+      byId('btnResetBrew').disabled = !selectedRecipe;
+      byId('journeyRecipeSummary').textContent = selectedRecipe
+        ? `${selectedRecipe.water} g water / ${selectedRecipe.coffee} g coffee at 1:${selectedRecipe.ratio.toFixed(1)}.`
+        : 'Choose a water amount or enter the coffee you have weighed.';
+      byId('setupSummary').textContent = selectedRecipe
+        ? `${brewSetup.scale === 'k112' ? 'K112 ' + (brewSetup.mode === 'auto' ? 'automatic' : 'manual') : 'Any scale'} | ${brewSetup.timer === 'app' ? 'App-guided' : 'Scale-timed'} | Weigh ${selectedRecipe.coffee} g coffee.`
+        : '';
+      byId('waterReadyHint').textContent = hasTemperaturePrep() && temperaturePrepState !== 'completed'
+        ? 'Start the cooling timer after boiling. Tap the running timer to skip the wait if your water is already at temperature.'
+        : 'When the water is ready, continue. The brew clock starts only when you start pouring in the next stage.';
+      document.querySelectorAll('[data-journey-lock]').forEach(element => {
+        element.hidden = !locked;
+        element.textContent = pendingBrew
+          ? 'Save or skip the result in stage 6 to unlock changes.'
+          : temperaturePrepState === 'running' ? 'The cooling timer is running. Tap it to skip the wait and unlock settings.'
+          : 'This brew is active. Finish it or use Reset in stage 5 before changing settings.';
+      });
+      document.querySelectorAll('[data-quick-water], .btn-water-recipe').forEach(button => { button.disabled = locked; });
+    }
 
     function validSetup(value) {
       return value && ['generic', 'k112'].includes(value.scale) &&
@@ -2825,18 +2919,18 @@
       byId('k112ModeField').hidden = !k112;
       byId('k112Safety').hidden = !k112;
       byId('startDelayField').hidden = brewSetup.timer !== 'app';
-      byId('modeGuidance').textContent = auto
-        ? 'Automatic mode is experimental for pulse pours: the manual describes a delayed start and stopping when flow stops. Watch for frozen weight/time during bloom or pauses. The app cannot detect or correct this. If it happens, reset the brew and try manual mode; do not reset the scale between pours.'
-        : brewSetup.timer === 'app'
+      byId('modeGuidance').textContent = brewSetup.timer === 'app'
           ? 'The app times the whole brew; your scale measures weight. Start pouring when the app timer starts. You do not need to start a second timer.'
-          : 'Your scale is the clock. Start its timer with the first pour and follow the reference timeline here. There is no app brew clock or automatic synchronization.';
+          : `Your scale is the clock. ${auto ? 'Check that its timer starts with your first pour' : 'Start its timer with the first pour'} and follow the reference timeline in stage 5. There is no app brew clock or automatic synchronization.`;
+      byId('autoModeGuidance').hidden = !auto;
+      byId('autoModeGuidance').textContent = 'Automatic mode is experimental for pulse pours: the manual describes a delayed start and stopping when flow stops. Watch for frozen weight/time during bloom or pauses. The app cannot detect or correct this. If it happens, reset the brew and try manual mode; do not reset the scale between pours.';
       const tare = k112 ? 'short-press ZERO/POWER' : 'press tare';
       const instructions = [
         k112
           ? 'Switch the K112 on at the back and place it on a level surface. Double-click ZERO/POWER if needed to select g.'
           : 'Place your scale on a level surface and select grams (g).',
-        'Fit and rinse the filter, preheat the carafe, then discard all rinse water.',
-        `Place the carafe, dripper and wet filter on the scale; ${tare}. Add and weigh your ground coffee.`,
+        'Fold and fit the paper filter in your V60. Rinse it with hot water, preheat the carafe, then discard all rinse water.',
+        `Place the carafe, dripper and wet filter on the scale; ${tare}. Add ${selectedRecipe ? selectedRecipe.coffee + ' g of ' : ''}ground coffee. Start with a medium-fine grind and adjust to taste.`,
         `With the coffee and brewing setup still on the scale, ${tare} again. Water should start at 0.0 g.`,
       ];
       if (k112) {
@@ -2844,11 +2938,11 @@
           ? 'Hold TIMER for 2 seconds to activate automatic mode; check the display droplet is on and the weight and timer are zero. Flow should start timing automatically, possibly with a delay.'
           : 'If the display droplet is on, hold TIMER for 2 seconds to leave automatic mode. Double-click TIMER to reset its timer if needed.');
       }
-      instructions.push(brewSetup.timer === 'app'
+      byId('brewStartGuidance').textContent = brewSetup.timer === 'app'
         ? 'Start the app, then begin the bloom when its timer starts. App timing stays independent of any scale timer.'
         : auto
           ? 'Begin your pour and check that the scale timer starts. Use the timeline as a reference; automatic time may exclude pauses or drawdown.'
-          : `Start the scale timer with your first pour${k112 ? ' using a short press of TIMER' : ''}. Leave it running through all pauses and drawdown.`);
+          : `Start the scale timer with your first pour${k112 ? ' using a short press of TIMER' : ''}. Leave it running through all pauses and drawdown.`;
       instructions.push('Keep the entire brewing setup on the scale. Do not tare between pours: every target is cumulative water poured.');
       byId('scaleChecklist').innerHTML = instructions.map(text => `<li>${escapeHtml(text)}</li>`).join('');
       renderCompanion();
@@ -2872,8 +2966,10 @@
         timer: byId('timerSource').value, delay: byId('startDelay').value
       };
       writeJSONStorage(SETUP_KEY, brewSetup);
-      if (selectedRecipe) resetBrewState({ releaseLock: false });
+      setupConfirmed = false;
+      if (selectedRecipe) resetBrewState({ releaseLock: false, preservePreparation: true });
       renderSetup();
+      if (selectedRecipe && brewSetup.timer === 'app' && notificationPermission === 'default') requestNotificationPermission();
     }
 
     function makeRecipe(water, ratio, dose = null) {
@@ -2892,7 +2988,7 @@
       };
     }
 
-    function restoreRecipe(recipe, ratio) {
+    function restoreRecipe(recipe, ratio, options = {}) {
       if (!canChangeRecipe()) return false;
       let restored;
       try {
@@ -2904,7 +3000,7 @@
       slider.value = restored.ratio;
       ratioDisplay.textContent = '1:' + restored.ratio.toFixed(1);
       btnResetRatio.classList.toggle('hidden', restored.ratio === DEFAULT_RATIO);
-      loadRecipe(restored);
+      loadRecipe(restored, options);
       generateTable(restored.ratio);
       return true;
     }
@@ -2937,7 +3033,9 @@
       byId('brewFocus').hidden = !selectedRecipe || isBrewComplete();
       const scaleTimed = brewSetup.timer === 'scale';
       byId('scaleReference').hidden = !selectedRecipe || !scaleTimed || isBrewComplete();
-      stepsGrid.hidden = scaleTimed;
+      stepsGrid.hidden = !selectedRecipe || scaleTimed || isBrewComplete();
+      byId('allBrewSteps').hidden = stepsGrid.hidden;
+      renderJourney();
       if (!selectedRecipe || isBrewComplete()) return;
       const targets = recipeTargets();
       if (scaleTimed) {
@@ -2953,8 +3051,8 @@
       if (byId('focusStage').textContent !== stage) byId('focusStage').textContent = stage;
       byId('focusTarget').textContent = prep ? 'Water before bloom' : scaleTimed && scaleBrewActive
         ? `${selectedRecipe.water} g final target` : index === 5 ? 'Swirl and let it drain' : `Pour to ${targets[index]} g total`;
-      byId('focusDetail').textContent = prep ? 'Complete the water preparation step above to unlock your brew.'
-        : scaleTimed ? 'Follow the cumulative targets and times below.'
+      byId('focusDetail').textContent = prep ? 'Complete stage 4, water preparation, to unlock your brew.'
+        : scaleTimed ? 'Follow the cumulative targets in the reference timeline.'
         : index === 5 ? 'Finish when the coffee has drained, even if that is before or after 3:00.'
         : `This pour: +${targets[index] - (targets[index - 1] || 0)} g. ${index === 0 ? 'Pour, swirl, then wait until 0:45.' : 'Target ' + formatTime(STEP_ENDS[index]) + ' from the first pour.'}`;
       byId('focusClock').textContent = prep ? '' : scaleTimed ? 'Clock: your scale (not connected)'
@@ -2964,13 +3062,13 @@
         ? `Next: ${STEP_NAMES[index + 1]} to ${targets[index + 1]} g by ${formatTime(STEP_ENDS[index + 1])}`
         : index === 4 ? 'Next: swirl and drawdown.' : 'No more water to add.';
       const action = byId('btnFocusAction');
-      action.disabled = prep;
+      action.disabled = prep || !setupConfirmed || !waterConfirmed;
       action.textContent = scaleTimed ? (scaleBrewActive ? 'Drawdown finished' : 'Begin scale-timed brew')
         : countdown ? 'Start pouring now' : active < 0 ? 'Start brew' : index === 5 ? 'Drawdown finished' : 'Next step now';
     }
 
     function handleFocusAction() {
-      if (!selectedRecipe || isBrewComplete() || temperaturePrepState === 'available' || temperaturePrepState === 'running') return;
+      if (!selectedRecipe || !setupConfirmed || !waterConfirmed || isBrewComplete() || temperaturePrepState === 'available' || temperaturePrepState === 'running') return;
       if (brewSetup.timer === 'scale') {
         if (scaleBrewActive) {
           scaleBrewActive = false;
@@ -3048,7 +3146,8 @@
               ![300, 500, 1000].includes(entry.kettleFill) ||
               !['beans', 'grind', 'taste', 'scaleNotes'].every(key => typeof entry[key] === 'string') ||
               !entry.recipe) throw new Error('Invalid brew history entry');
-          makeRecipe(entry.recipe.water, entry.recipe.ratio, entry.recipe.basis === 'dose' ? Number(entry.recipe.coffee) : null);
+          if (![undefined, 'water', 'dose'].includes(entry.recipe.basis)) throw new Error('Invalid recipe basis');
+          entry.recipe = makeRecipe(entry.recipe.water, entry.recipe.ratio, entry.recipe.basis === 'dose' ? Number(entry.recipe.coffee) : null);
           ids.add(entry.id);
         }
         return saved;
@@ -3072,7 +3171,8 @@
       }
       const history = loadBrewHistory();
       if (history === null) {
-        feedback.textContent = 'History could not be read. This result has not been saved; keep a copy of your measurements.';
+        feedback.textContent = 'History could not be read. This result has not been saved. Use Clear unreadable history in Brew history to recover, then retry saving.';
+        renderBrewHistory();
         return;
       }
       const timeSource = pendingBrew.setup.timer === 'app'
@@ -3092,11 +3192,13 @@
       showCompanionMessage('Brew saved locally. You can compare it in Brew history.');
       renderBrewHistory();
       renderCompanion();
+      focusJourneyStage('historyHeading');
     }
 
     function renderBrewHistory() {
       const history = loadBrewHistory();
       const container = byId('brewHistory');
+      byId('historyRecovery').hidden = history !== null;
       if (history === null) {
         container.textContent = 'Saved history could not be read. It has not been overwritten.';
         return;
@@ -3118,7 +3220,7 @@
           <p>${setup} | ${entry.setup.timer === 'app' ? 'App-guided' : 'Scale-timed'}</p>
           <p>Actual: ${entry.coffee.toFixed(1)} g coffee / ${entry.water.toFixed(1)} g water | 1:${(entry.water / entry.coffee).toFixed(2)}</p>
           <p>${formatTime(entry.seconds)} (${timeLabels[entry.timeSource]})</p>
-          <p>Recipe target: ${entry.recipe.water} g water / ${entry.recipe.coffee} g coffee, 1:${entry.recipe.ratio.toFixed(1)}${entry.temperature ? ' | Temperature target: ' + escapeHtml(entry.temperature) + ' °C (estimated)' : ''}</p>
+          <p>Recipe target: ${entry.recipe.water} g water / ${escapeHtml(entry.recipe.coffee)} g coffee, 1:${entry.recipe.ratio.toFixed(1)}${entry.temperature ? ' | Temperature target: ' + escapeHtml(entry.temperature) + ' °C (estimated)' : ''}</p>
           ${notes}
           <div class="companion-actions">
             <button type="button" class="companion-button" data-history-repeat="${escapeHtml(entry.id)}">Repeat recipe and setup</button>
@@ -3145,8 +3247,9 @@
         temperatureEstimatorTarget.value = entry.temperature == null ? '' : String(entry.temperature);
         saveTemperatureEstimatorState(temperatureEstimatorVolume.value, temperatureEstimatorTarget.value);
         resetBrewState({ releaseLock: false });
+        renderTemperatureEstimator();
         renderSetup();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        continueFromRecipe();
       } else if (window.confirm('Delete this saved brew from this browser?')) {
         if (writeJSONStorage(HISTORY_KEY, history.filter(item => item.id !== remove.dataset.historyDelete))) renderBrewHistory();
       }
@@ -3410,40 +3513,52 @@
       if (selectedRecipe) {
         const dose = selectedRecipe.basis === 'dose' ? Number(selectedRecipe.coffee) : null;
         const water = dose === null ? selectedRecipe.water : Math.round(dose * val);
-        if (!restoreRecipe({ water, coffee: dose, basis: selectedRecipe.basis }, val)) {
+        if (!restoreRecipe({ water, coffee: dose, basis: selectedRecipe.basis }, val,
+          { preservePreparation: true, preserveJourney: true, deferUrl: true })) {
           slider.value = selectedRecipe.ratio;
-          return;
         }
+        return;
       }
       ratioDisplay.textContent = '1:' + val.toFixed(1);
       btnResetRatio.classList.toggle('hidden', val === DEFAULT_RATIO);
       generateTable(val);
-      updateShareUrl();
+      updateShareUrl({ defer: true });
     }
 
     function resetRatio() {
       slider.value = DEFAULT_RATIO;
       handleSliderInput();
+      updateShareUrl();
     }
 
     // --- Shareable URL sync ---
     // URL format: ?ratio=1:16.7&water=300  (ratio also accepts plain "16.7")
-    function updateShareUrl() {
+    function buildShareUrl() {
+      const params = new URLSearchParams();
+      const ratio = parseFloat(slider.value);
+      if (!isNaN(ratio) && ratio !== DEFAULT_RATIO) params.set('ratio', '1:' + ratio.toFixed(1));
+      if (selectedRecipe) {
+        params.set('water', String(selectedRecipe.water));
+        if (selectedRecipe.basis === 'dose') params.set('coffee', selectedRecipe.coffee);
+      }
+      const url = new URL(window.location.href);
+      url.search = params.toString();
+      return url.href;
+    }
+
+    function updateShareUrl({ defer = false } = {}) {
+      clearTimeout(shareUrlTimer);
+      shareUrlTimer = null;
+      if (defer) {
+        shareUrlTimer = setTimeout(() => updateShareUrl(), 200);
+        return;
+      }
       try {
-        const params = new URLSearchParams();
-        const ratio = parseFloat(slider.value);
-        if (!isNaN(ratio) && ratio !== DEFAULT_RATIO) {
-          params.set('ratio', '1:' + ratio.toFixed(1));
-        }
-        if (selectedRecipe && selectedRecipe.water) {
-          params.set('water', String(selectedRecipe.water));
-          if (selectedRecipe.basis === 'dose') params.set('coffee', selectedRecipe.coffee);
-        }
-        const query = params.toString();
-        const newUrl = window.location.pathname + (query ? '?' + query : '') + window.location.hash;
-        window.history.replaceState(null, '', newUrl);
+        const url = buildShareUrl();
+        if (window.location.href !== url) window.history.replaceState(null, '', url);
       } catch (e) {
-        // history API unavailable - silently ignore
+        console.warn('Could not update the recipe address:', e);
+        showCompanionMessage('The browser could not update the address. Use Share to get the current recipe link.');
       }
     }
 
@@ -3465,35 +3580,40 @@
       const ratio = parseRatioParam(params.get('ratio'));
       if (ratio !== null) {
         slider.value = ratio;
-      } else if (params.has('ratio')) {
-        showCompanionMessage('The shared ratio is invalid; using 1:16.7.');
       }
       handleSliderInput();
 
       if (params.has('coffee')) {
         const coffee = Number(params.get('coffee'));
-        restoreRecipe({ water: Math.round(coffee * Number(slider.value)), coffee, basis: 'dose' }, Number(slider.value));
+        const water = Math.round(coffee * Number(slider.value));
+        if (restoreRecipe({ water, coffee, basis: 'dose' }, Number(slider.value)) &&
+            params.has('water') && Number(params.get('water')) !== water) {
+          showCompanionMessage(`The shared water target did not match the coffee dose. Using ${water} g water calculated from the dose and ratio.`);
+        }
       } else if (params.has('water')) {
         selectRecipeByWater(Number(params.get('water')));
       }
+      if (params.has('ratio') && ratio === null) showCompanionMessage('The shared ratio is invalid; using 1:16.7.');
+      updateShareUrl();
     }
 
     // --- Table generation (10g increments) ---
     function generateTable(ratio) {
       let html = '';
       const currentRatio = ratio.toFixed(1);
+      const favoriteKeys = new Set(loadFavorites().map(favorite => favorite.key));
       for (let water = 100; water <= 500; water += 10) {
         const { coffee, bloom, pour1, pour2, pour3, pour4 } = makeRecipe(water, ratio);
         const isHighlight = water === 250;
         const isSelected = selectedRecipe && selectedRecipe.water === water && selectedRecipe.basis === 'water';
-        const favorited = isFavorite(currentRatio, water);
+        const favorited = favoriteKeys.has(getFavoriteKey(currentRatio, water));
 
         let classes = [];
         if (isHighlight) classes.push('highlight');
         if (isSelected) classes.push('selected');
 
         html += `<tr class="${classes.join(' ')}" data-water="${water}" data-coffee="${coffee}" data-bloom="${bloom}" data-pour1="${pour1}" data-pour2="${pour2}" data-pour3="${pour3}" data-pour4="${pour4}">
-          <td>${water}g</td>
+          <td><button type="button" class="btn-water-recipe" aria-label="Use ${water} g water recipe">${water}g</button></td>
           <td>${coffee}g</td>
           <td>${bloom}g</td>
           <td>${pour1}g</td>
@@ -3510,8 +3630,7 @@
         row.addEventListener('click', (e) => {
           // Don't select recipe when clicking the favorite button
           if (e.target.closest('.btn-favorite')) return;
-          selectRecipe(row);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          if (selectRecipe(row)) continueFromRecipe();
         });
       });
 
@@ -3522,8 +3641,8 @@
           toggleFavorite(btn.dataset.ratio, parseInt(btn.dataset.water), btn.dataset.coffee, btn.dataset.bloom, btn.dataset.pour1, btn.dataset.pour2, btn.dataset.pour3, btn.dataset.pour4);
           generateTable(ratio);
         });
-        renderFavoriteButton();
       });
+      renderFavoriteButton();
     }
 
     // --- Select a recipe row ---
@@ -3546,23 +3665,26 @@
     }
 
     function selectRecipe(row) {
-      if (!canChangeRecipe()) return;
+      if (!canChangeRecipe()) return false;
       loadRecipe(makeRecipe(Number(row.dataset.water), Number(slider.value)));
+      return true;
     }
 
-    function loadRecipe(recipe) {
+    function loadRecipe(recipe, { preservePreparation = false, preserveJourney = false, deferUrl = false } = {}) {
+      showCompanionMessage('');
       const { water, coffee, bloom, pour1, pour2, pour3, pour4 } = recipe;
       selectedRecipe = recipe;
+      if (!preserveJourney) {
+        setupConfirmed = false;
+        byId('setupControls').open = true;
+        byId('recipeChoices').open = false;
+      }
       byId('coffeeDose').value = recipe.basis === 'dose' ? coffee : '';
 
       // Update table highlight
       tableBody.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
       const row = tableBody.querySelector(`tr[data-water="${water}"]`);
       if (row && recipe.basis === 'water') row.classList.add('selected');
-
-      // Show steps grid, hide notice
-      noRecipeNotice.style.display = 'none';
-      stepsGrid.style.display = '';
 
       // Update recipe label
       brewRecipeLabel.textContent = `Brewing ${water}g water / ${coffee}g coffee`;
@@ -3576,12 +3698,13 @@
       document.getElementById('step5Detail').innerHTML = `Gently swirl &amp; drain<br>Target <strong>~3:00</strong>`;
 
       // Reset brew state
-      resetBrewState({ releaseLock: false });
+      resetBrewState({ releaseLock: false, preservePreparation, preserveJourney });
       renderTemperatureEstimator();
+      renderSetup();
 
       // Show the share button now that a recipe is selected, and sync URL
       if (btnShareRecipe) btnShareRecipe.hidden = false;
-      updateShareUrl();
+      updateShareUrl({ defer: deferUrl });
 
       // Sync favorites selection highlight
       renderFavorites();
@@ -3598,7 +3721,10 @@
     }
 
     // --- Brew step logic ---
-    function resetBrewState({ releaseLock = true } = {}) {
+    function resetBrewState({ releaseLock = true, preservePreparation = false, preserveJourney = false } = {}) {
+      const keepPrep = preservePreparation && temperaturePrepState === 'completed' && !hasStartedBrewSteps();
+      waterConfirmed = preserveJourney && waterConfirmed && (!hasTemperaturePrep() || keepPrep);
+      showCompanionMessage('');
       clearInterval(brewClockTimer);
       brewClockTimer = null;
       brewStartedAt = null;
@@ -3628,8 +3754,9 @@
       if (selectedRecipe) {
         const selection = getTemperatureEstimatorSelection();
         if (selection.targetTemp !== null) {
-          temperaturePrepState = 'available';
-          temperaturePrepRemaining = selection.waitSeconds;
+          temperaturePrepState = keepPrep ? 'completed' : 'available';
+          temperaturePrepRemaining = keepPrep ? 0 : selection.waitSeconds;
+          if (keepPrep) stepStates[0] = 'available';
         } else {
           temperaturePrepState = 'hidden';
           temperaturePrepRemaining = 0;
@@ -3642,7 +3769,6 @@
 
       // Hide completion message, restore steps grid
       stepsGrid.classList.remove('fade-out');
-      stepsGrid.style.display = selectedRecipe ? '' : 'none';
       document.getElementById('brewComplete').classList.remove('show');
       document.getElementById('btnBrewAgain').classList.remove('visible');
 
@@ -3683,6 +3809,7 @@
             break;
         }
         if (i === 5 && stepStates[i] === 'running') timerEl.textContent = formatTime(elapsedBrewSeconds());
+        if (i === 5 && stepStates[i] === 'locked') timerEl.textContent = '~3:00 target';
       }
       renderCompanion();
     }
@@ -3739,7 +3866,7 @@
       }
 
       if (!selectedRecipe || !selection || selection.targetTemp === null) {
-        temperaturePrepStep.style.display = 'none';
+        temperaturePrepStep.hidden = true;
         temperaturePrepStep.className = 'brew-prep-step';
         temperaturePrepStep.setAttribute('aria-hidden', 'true');
         temperaturePrepHint.textContent = '';
@@ -3752,7 +3879,7 @@
         ? 0
         : (temperaturePrepRemaining || selection.waitSeconds);
       temperaturePrepTimer.textContent = formatTime(Math.max(0, prepSeconds));
-      temperaturePrepStep.style.display = '';
+      temperaturePrepStep.hidden = false;
       temperaturePrepStep.className = `brew-prep-step ${temperaturePrepState}`;
       temperaturePrepStep.setAttribute('aria-hidden', 'false');
 
@@ -3800,7 +3927,7 @@
       const selection = getTemperatureEstimatorSelection();
 
       if (selection.targetTemp === null) {
-        temperatureEstimatorResult.innerHTML = `Select a target brew temperature if you want to add the optional <strong>0 — Water</strong> timer before the bloom.`;
+        temperatureEstimatorResult.innerHTML = `Select a target brew temperature if you want to add the optional <strong>water cooling timer</strong> before the bloom.`;
       } else {
         temperatureEstimatorResult.innerHTML = `Bring the water to a <strong>full boil</strong>, then wait <strong>${formatWaitTime(selection.waitSeconds)}</strong> for about <strong>${selection.targetTemp} °C</strong> using the <strong>${selection.volumeLabel}</strong> profile.`;
       }
@@ -3966,9 +4093,9 @@
       brewClockTimer = null;
       prepareBrewResult();
       stepsGrid.classList.add('fade-out');
-      stepsGrid.style.display = 'none';
+      stepsGrid.hidden = true;
       if (temperaturePrepStep) {
-        temperaturePrepStep.style.display = 'none';
+        temperaturePrepStep.hidden = true;
       }
       document.getElementById('brewComplete').classList.add('show');
 
@@ -3991,6 +4118,7 @@
         releaseWakeLock();
       }, WAKE_LOCK_RELEASE_DELAY_MS));
       renderCompanion();
+      focusJourneyStage('resultHeading');
     }
 
     function clearBrewCompleteTimers() {
@@ -4100,6 +4228,7 @@
 
     function handleStepClick(stepIndex) {
       if (brewSetup.timer !== 'app') return;
+      if (!setupConfirmed || !waterConfirmed) return;
       const state = stepStates[stepIndex];
 
       if (state === 'available') {
@@ -4151,8 +4280,10 @@
     // Reset brew button
     btnResetBrew.addEventListener('click', () => {
       if (selectedRecipe) {
-        if (pendingBrew) showCompanionMessage('Brew reset. The unsaved result was discarded.');
+        const discarded = Boolean(pendingBrew);
         resetBrewState();
+        if (discarded) showCompanionMessage('Brew reset. The unsaved result was discarded.');
+        focusJourneyStage(setupConfirmed ? 'waterHeading' : 'setupHeading');
       }
     });
 
@@ -4160,12 +4291,13 @@
     document.getElementById('btnBrewAgain').addEventListener('click', () => {
       if (selectedRecipe && !pendingBrew) {
         resetBrewState();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        focusJourneyStage(setupConfirmed ? 'waterHeading' : 'setupHeading');
       }
     });
 
     // --- Slider events ---
     slider.addEventListener('input', handleSliderInput);
+    slider.addEventListener('change', () => updateShareUrl());
     btnResetRatio.addEventListener('click', resetRatio);
     function handleTemperatureEstimatorChange() {
       if (isBrewTimerRunning() || pendingBrew) {
@@ -4176,9 +4308,8 @@
       saveTemperatureEstimatorState(temperatureEstimatorVolume.value, temperatureEstimatorTarget.value);
       if (selectedRecipe && !hasStartedBrewSteps()) {
         resetBrewState({ releaseLock: false });
-      } else {
-        renderTemperatureEstimator();
       }
+      renderTemperatureEstimator();
     }
     temperatureEstimatorVolume.addEventListener('change', handleTemperatureEstimatorChange);
     temperatureEstimatorTarget.addEventListener('change', handleTemperatureEstimatorChange);
@@ -4196,6 +4327,7 @@
       byId('brewResult').hidden = true;
       showCompanionMessage('Result discarded without saving.');
       renderCompanion();
+      focusJourneyStage('brewHeading');
     });
     byId('doseForm').addEventListener('submit', event => {
       event.preventDefault();
@@ -4209,6 +4341,7 @@
       }
       if (restoreRecipe({ water, coffee: dose, basis: 'dose' }, ratio)) {
         byId('doseFeedback').textContent = `${dose.toFixed(1)} g coffee uses ${water} g water (rounded to whole grams).`;
+        continueFromRecipe();
       }
     });
     byId('btnFavoriteRecipe').addEventListener('click', () => {
@@ -4223,12 +4356,48 @@
         event.returnValue = '';
       }
     });
+    byId('btnIntroNext').addEventListener('click', () => {
+      byId('brewIntro').open = false;
+      byId('recipeChoices').open = true;
+      focusJourneyStage('recipeHeading');
+    });
+    byId('btnRecipeNext').addEventListener('click', continueFromRecipe);
+    document.querySelectorAll('[data-quick-water]').forEach(button => {
+      button.addEventListener('click', () => {
+        if (selectRecipeByWater(Number(button.dataset.quickWater))) continueFromRecipe();
+      });
+    });
+    byId('btnSetupReady').addEventListener('click', () => {
+      if (!selectedRecipe || !canChangeRecipe()) return;
+      showCompanionMessage('');
+      setupConfirmed = true;
+      byId('setupControls').open = false;
+      renderCompanion();
+      focusJourneyStage('waterHeading');
+    });
+    byId('btnWaterReady').addEventListener('click', () => {
+      if (!setupConfirmed || !canChangeRecipe() || (hasTemperaturePrep() && temperaturePrepState !== 'completed')) return;
+      showCompanionMessage('');
+      waterConfirmed = true;
+      renderCompanion();
+      focusJourneyStage('brewHeading');
+    });
+    byId('btnResetHistory').addEventListener('click', () => {
+      if (!window.confirm('Delete all unreadable brew history? Favorites, setup and the current result will be kept.')) return;
+      if (!removeStorage(HISTORY_KEY)) return;
+      renderBrewHistory();
+      showCompanionMessage('Unreadable history cleared. Favorites and setup were kept.');
+      if (pendingBrew) {
+        byId('resultFeedback').textContent = 'History cleared. You can now save this result.';
+        focusJourneyStage('resultHeading');
+      }
+    });
 
     // --- Share button ---
     async function shareCurrentRecipe() {
       // Make sure the URL reflects current state before sharing
       updateShareUrl();
-      const url = window.location.href;
+      const url = buildShareUrl();
       const title = 'V60 Recipe';
       const text = selectedRecipe
         ? `V60 brew: ${selectedRecipe.water}g water / ${selectedRecipe.coffee}g coffee (1:${parseFloat(slider.value).toFixed(1)})`
@@ -4279,6 +4448,9 @@
         restoreRecipe(lastBrew.recipe, lastBrew.ratio === undefined ? DEFAULT_RATIO : lastBrew.ratio);
       }
     }
+    const introOpen = readJSONStorage('v60_intro_open', null);
+    byId('brewIntro').open = typeof introOpen === 'boolean' ? introOpen : !selectedRecipe;
+    byId('brewIntro').addEventListener('toggle', () => writeJSONStorage('v60_intro_open', byId('brewIntro').open));
 
     // --- GitHub Star Count ---
     // Note: Functions are kept in global scope for testing purposes

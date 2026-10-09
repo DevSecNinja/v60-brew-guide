@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { JSDOM, VirtualConsole } = require('jsdom');
+const { confirmPreparation } = require('../helpers/brew-journey');
 
 const html = fs.readFileSync(path.resolve(__dirname, '../../index.html'), 'utf8');
 
@@ -12,7 +13,10 @@ describe('Scale companion', () => {
     get(id).dispatchEvent(new win.Event(id === 'ratioSlider' ? 'input' : 'change'));
   };
   const submit = id => get(id).dispatchEvent(new win.Event('submit', { cancelable: true }));
-  const select = (water = 250) => win.selectRecipeByWater(water);
+  const select = (water = 250) => {
+    win.selectRecipeByWater(water);
+    confirmPreparation(win);
+  };
   const advance = seconds => {
     now += seconds * 1000;
     win.tickBrew();
@@ -80,7 +84,8 @@ describe('Scale companion', () => {
     expect(get('scaleChecklist').textContent).toContain('ZERO/POWER');
     expect(get('scaleChecklist').textContent).toContain('Do not tare between pours');
     expect(get('k112Safety').hidden).toBe(false);
-    expect(get('modeGuidance').textContent).toContain(mode === 'auto' ? 'experimental' : 'The app times');
+    expect(get('modeGuidance').textContent).toContain('The app times');
+    if (mode === 'auto') expect(get('autoModeGuidance').textContent).toContain('experimental');
     const setup = win.localStorage.getItem('v60_setup');
     create({ storage: { v60_setup: setup } });
     expect(get('scaleType').value).toBe('k112');
@@ -171,6 +176,7 @@ describe('Scale companion', () => {
     create({ storage: { v60_favorites: favorites } });
     doc.querySelector('.favorite-card').click();
     expect(get('brewRecipeLabel').textContent).toContain('254g water / 15.2g coffee');
+    confirmPreparation(win);
     get('btnFocusAction').click();
     get('btnFocusAction').click();
     advance(185);
@@ -248,8 +254,10 @@ describe('Scale companion', () => {
     get('temperaturePrepStep').click();
     expect(get('scaleType').disabled).toBe(true);
     get('temperaturePrepStep').click();
-    expect(get('btnFocusAction').disabled).toBe(false);
+    expect(get('btnFocusAction').disabled).toBe(true);
     expect(get('scaleType').disabled).toBe(false);
+    get('btnWaterReady').click();
+    expect(get('btnFocusAction').disabled).toBe(false);
     get('btnFocusAction').click();
     expect(win.isBrewRunning()).toBe(true);
   });
@@ -279,6 +287,7 @@ describe('Scale companion', () => {
     get('btnResetBrew').click();
     expect(win.isBrewRunning()).toBe(false);
     change('timerSource', 'scale');
+    confirmPreparation(win);
     get('btnFocusAction').click();
     get('btnResetBrew').click();
     expect(win.isBrewRunning()).toBe(false);
@@ -347,6 +356,7 @@ describe('Scale companion', () => {
     select();
     get('temperaturePrepStep').click();
     get('temperaturePrepStep').click();
+    get('btnWaterReady').click();
     get('btnFocusAction').click();
     get('btnFocusAction').click();
     advance(185);
@@ -358,6 +368,8 @@ describe('Scale companion', () => {
     expect(get('temperatureEstimatorVolume').value).toBe('1000');
     expect(get('temperatureEstimatorTarget').value).toBe('94');
     expect(get('temperaturePrepTimer').textContent).toBe('2:00');
+    expect(get('temperatureEstimatorResult').textContent).toContain('~2 minutes');
+    expect(get('temperatureEstimatorTimeline').textContent).toContain('120s');
   });
 
   test.each(['not-json', '{}', '[null]'])('corrupt history %s is reported and not overwritten', raw => {
@@ -367,5 +379,142 @@ describe('Scale companion', () => {
     save();
     expect(get('brewResult').hidden).toBe(false);
     expect(win.localStorage.getItem('v60_history')).toBe(raw);
+  });
+
+  test('stages stay mounted but require explicit preparation before starting', () => {
+    const startDelay = get('startDelay');
+    win.selectRecipeByWater(250);
+    expect(get('setupStage').hidden).toBe(false);
+    expect(get('waterStage').hidden).toBe(true);
+    expect(get('brewStage').hidden).toBe(true);
+    get('step0').click();
+    expect(win.isBrewRunning()).toBe(false);
+    get('btnSetupReady').click();
+    expect(get('waterStage').hidden).toBe(false);
+    expect(get('brewStage').hidden).toBe(true);
+    get('btnWaterReady').click();
+    expect(get('brewStage').hidden).toBe(false);
+    expect(get('startDelay')).toBe(startDelay);
+    expect(get('step5Timer').textContent).toBe('~3:00 target');
+  });
+
+  test('successful selection and reset clear obsolete companion warnings', () => {
+    create({ url: 'http://localhost/?water=250garbage' });
+    expect(get('companionMessage').hidden).toBe(false);
+    select();
+    expect(get('companionMessage').hidden).toBe(true);
+    get('btnFocusAction').click();
+    win.selectRecipeByWater(300);
+    expect(get('companionMessage').hidden).toBe(false);
+    get('btnResetBrew').click();
+    expect(get('companionMessage').hidden).toBe(true);
+  });
+
+  test.each(['[null]', '[1]', '[{}]', '[[]]'])('invalid favorite entries %s cannot abort initialization', favorites => {
+    create({ storage: { v60_favorites: favorites } });
+    expect(doc.querySelectorAll('#recipeTableBody tr')).toHaveLength(41);
+    expect(get('storageWarning').hidden).toBe(false);
+    startApp();
+    expect(win.isBrewRunning()).toBe(true);
+  });
+
+  test('malformed favorites preserve usable entries', () => {
+    select();
+    get('btnFavoriteRecipe').click();
+    const favorites = JSON.parse(win.localStorage.getItem('v60_favorites'));
+    create({ storage: { v60_favorites: JSON.stringify([null, ...favorites]) } });
+    expect(win.loadFavorites()).toHaveLength(1);
+    expect(doc.querySelectorAll('.favorite-card')).toHaveLength(1);
+    doc.querySelector('.favorite-card').click();
+    expect(get('journeyRecipeSummary').textContent).toContain('250 g water');
+  });
+
+  test('history recomputes water-basis recipe coffee instead of rendering stored markup', () => {
+    finishApp();
+    save();
+    const saved = history();
+    saved[0].recipe.coffee = '<img src=x onerror=alert(1)>';
+    create({ storage: { v60_history: JSON.stringify(saved) } });
+    expect(get('brewHistory').querySelector('img')).toBeNull();
+    expect(get('brewHistory').textContent).toContain('250 g water / 15.0 g coffee');
+  });
+
+  test('explicit recovery clears only history and retains the pending result', () => {
+    select();
+    get('btnFavoriteRecipe').click();
+    const favorites = win.localStorage.getItem('v60_favorites');
+    change('scaleType', 'k112');
+    finishApp();
+    const setup = win.localStorage.getItem('v60_setup');
+    get('resultWater').value = '252.3';
+    get('resultTaste').value = 'Keep this note';
+    win.localStorage.setItem('v60_history', '[null]');
+    submit('brewResultForm');
+    expect(get('historyRecovery').hidden).toBe(false);
+    win.confirm = () => false;
+    get('btnResetHistory').click();
+    expect(win.localStorage.getItem('v60_history')).toBe('[null]');
+    win.confirm = () => true;
+    get('btnResetHistory').click();
+    expect(win.localStorage.getItem('v60_history')).toBeNull();
+    expect(win.localStorage.getItem('v60_favorites')).toBe(favorites);
+    expect(win.localStorage.getItem('v60_setup')).toBe(setup);
+    expect(get('resultTaste').value).toBe('Keep this note');
+    expect(get('brewResult').hidden).toBe(false);
+    save();
+    expect(history()[0].taste).toBe('Keep this note');
+  });
+
+  test('ratio input rebuilds once, debounces its URL, and skips unchanged URLs', () => {
+    select();
+    const tableSpy = jest.spyOn(win, 'generateTable');
+    const urlSpy = jest.spyOn(win.history, 'replaceState');
+    for (let i = 0; i < 30; i++) change('ratioSlider', String(14 + i / 10));
+    expect(tableSpy).toHaveBeenCalledTimes(30);
+    expect(urlSpy).not.toHaveBeenCalled();
+    get('ratioSlider').dispatchEvent(new win.Event('change'));
+    expect(urlSpy).toHaveBeenCalledTimes(1);
+    expect(new URL(win.location.href).searchParams.get('ratio')).toBe('1:16.9');
+    win.updateShareUrl();
+    expect(urlSpy).toHaveBeenCalledTimes(1);
+  });
+
+  test('table generation reads favorites once and refreshes the favorite button once', () => {
+    select();
+    const storageSpy = jest.spyOn(win.Storage.prototype, 'getItem');
+    const buttonSpy = jest.spyOn(win, 'renderFavoriteButton');
+    win.generateTable(16.7);
+    expect(buttonSpy).toHaveBeenCalledTimes(1);
+    expect(storageSpy.mock.calls.filter(([key]) => key === 'v60_favorites')).toHaveLength(2);
+  });
+
+  test('ratio edits preserve both completed preparation and journey readiness', () => {
+    change('temperatureEstimatorTarget', '94');
+    select();
+    get('temperaturePrepStep').click();
+    get('temperaturePrepStep').click();
+    get('btnWaterReady').click();
+    change('ratioSlider', '16');
+    expect(get('temperaturePrepStep').classList.contains('completed')).toBe(true);
+    expect(get('brewStage').hidden).toBe(false);
+    expect(get('btnFocusAction').disabled).toBe(false);
+  });
+
+  test('switching from scale to app timing asks for notifications before brew start', async () => {
+    const requestPermission = jest.fn(() => Promise.resolve('granted'));
+    win.Notification = { permission: 'default', requestPermission };
+    change('timerSource', 'scale');
+    select();
+    expect(requestPermission).not.toHaveBeenCalled();
+    change('timerSource', 'app');
+    expect(requestPermission).toHaveBeenCalledTimes(1);
+    expect(win.isBrewRunning()).toBe(false);
+    await Promise.resolve();
+  });
+
+  test('conflicting share parameters explain why dose determines water', () => {
+    create({ url: 'http://localhost/?coffee=15.2&water=250' });
+    expect(get('journeyRecipeSummary').textContent).toContain('254 g');
+    expect(get('companionMessage').textContent).toContain('did not match');
   });
 });
