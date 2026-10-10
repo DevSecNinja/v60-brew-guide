@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
+const { confirmPreparation } = require('../helpers/brew-journey');
 
 // Load the HTML file
 const html = fs.readFileSync(path.resolve(__dirname, '../../index.html'), 'utf8');
@@ -166,6 +167,7 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
       const rows = doc.querySelectorAll('#recipeTableBody tr');
       const row = Array.from(rows).find(r => r.dataset.water === String(waterAmount));
       row.click();
+      confirmPreparation(window);
       return row;
     }
 
@@ -240,6 +242,7 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
       const rows = doc.querySelectorAll('#recipeTableBody tr');
       const row = Array.from(rows).find(r => r.dataset.water === String(waterAmount));
       row.click();
+      confirmPreparation(window);
       return row;
     }
 
@@ -276,6 +279,7 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
       const rows = doc.querySelectorAll('#recipeTableBody tr');
       const row = Array.from(rows).find(r => r.dataset.water === String(waterAmount));
       row.click();
+      confirmPreparation(window);
       return row;
     }
 
@@ -499,6 +503,7 @@ describe('V60 Recipe Calculator — Wake Lock', () => {
       selectRow(250);
       completeBrew();
 
+      doc.getElementById('btnDiscardResult').click();
       window.requestWakeLock = () => {
         wakeLockCallCount++;
         return Promise.resolve(false);

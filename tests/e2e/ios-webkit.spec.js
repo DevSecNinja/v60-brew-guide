@@ -19,76 +19,7 @@
  */
 
 const { test, expect } = require('@playwright/test');
-const fs = require('node:fs');
-const http = require('node:http');
-const path = require('node:path');
-
-const REPO_ROOT = path.resolve(__dirname, '../..');
-
-const CONTENT_TYPES = {
-  '.css': 'text/css; charset=utf-8',
-  '.html': 'text/html; charset=utf-8',
-  '.ico': 'image/x-icon',
-  '.js': 'text/javascript; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.png': 'image/png',
-  '.svg': 'image/svg+xml',
-  '.webmanifest': 'application/manifest+json; charset=utf-8',
-};
-
-async function startStaticServer() {
-  const sockets = new Set();
-
-  const server = http.createServer((request, response) => {
-    const requestUrl = new URL(request.url, 'http://localhost');
-    const pathname = decodeURIComponent(requestUrl.pathname);
-    const relativePath = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
-    const filePath = path.resolve(REPO_ROOT, relativePath);
-    const isInsideRepo = filePath === REPO_ROOT || filePath.startsWith(REPO_ROOT + path.sep);
-
-    if (!isInsideRepo) {
-      response.writeHead(403);
-      response.end('Forbidden');
-      return;
-    }
-
-    fs.readFile(filePath, (error, body) => {
-      if (error) {
-        response.writeHead(error.code === 'ENOENT' ? 404 : 500);
-        response.end(error.code === 'ENOENT' ? 'Not found' : 'Server error');
-        return;
-      }
-
-      response.writeHead(200, {
-        'Cache-Control': 'no-store',
-        'Content-Type': CONTENT_TYPES[path.extname(filePath)] || 'application/octet-stream',
-      });
-      response.end(body);
-    });
-  });
-
-  server.on('connection', (socket) => {
-    sockets.add(socket);
-    socket.on('close', () => sockets.delete(socket));
-  });
-
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-
-  let closed = false;
-  return {
-    url: `http://127.0.0.1:${server.address().port}`,
-    close: () =>
-      new Promise((resolve) => {
-        if (closed) {
-          resolve();
-          return;
-        }
-        closed = true;
-        server.close(resolve);
-        for (const socket of sockets) socket.destroy();
-      }),
-  };
-}
+const { startStaticServer } = require('../helpers/static-server');
 
 async function waitForServiceWorkerReadyAndControlling(page) {
   const isControlled = await page.evaluate(async () => {
@@ -148,8 +79,7 @@ async function waitForAppShellCached(page) {
 
 async function expectAppShellRendered(page) {
   await expect(page.getByRole('heading', { name: 'V60 Brew Guide' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Coffee-to-Water Ratio' })).toBeVisible();
-  await expect(page.locator('input[type="range"]')).toBeVisible();
+  await expect(page.locator('#recipeHeading')).toBeVisible();
   await expect(page.locator('table tbody tr')).toHaveCount(41);
 }
 
@@ -172,6 +102,7 @@ test.describe('Page load', () => {
 
   test('250 g row is highlighted by default', async ({ page }) => {
     await page.goto('/', { waitUntil: 'networkidle' });
+    await page.locator('#recipeReference > summary').click();
     // The 250 g row is the default highlighted row; the app marks it with the
     // --highlight-bg/border CSS custom properties applied via a class or style.
     // We verify it is visually distinct by checking its background color differs
@@ -248,6 +179,7 @@ test.describe('Zoom prevention', () => {
 test.describe('Ratio slider', () => {
   test('changing the slider updates the coffee column', async ({ page }) => {
     await page.goto('/');
+    await page.locator('#recipeAdjustments > summary').click();
 
     const slider = page.locator('input[type="range"]');
     await expect(slider).toBeVisible();
@@ -284,24 +216,30 @@ test.describe('Ratio slider', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('Brew timer', () => {
-  test('tapping a recipe row reveals the brew steps section', async ({ page }) => {
+  test('a selected recipe requires Continue before revealing setup', async ({ page }) => {
     await page.goto('/');
+    await page.locator('#recipeReference > summary').click();
 
     // Tap the first data row in the recipe table to select a recipe.
     const firstRow = page.locator('table tbody tr').first();
     await firstRow.tap();
 
-    // The brew-steps section should now be visible.
-    const brewSection = page.locator('#brew-steps, [id*="brew"], [class*="brew-steps"]').first();
-    await expect(brewSection).toBeVisible({ timeout: 3000 });
+    await expect(page.locator('#setupStage')).not.toBeVisible();
+    await page.locator('#btnRecipeNext').click();
+    await expect(page.locator('#setupStage')).toBeVisible();
+    await expect(page.locator('#brewStage')).not.toBeVisible();
   });
 
-  test('first brew step becomes available after selecting a recipe', async ({ page }) => {
+  test('first brew step becomes available after preparing recipe and water', async ({ page }) => {
     await page.goto('/');
-    await page.locator('table tbody tr').first().tap();
+    await page.locator('[data-quick-water="250"]').click();
+    await page.locator('#btnRecipeNext').click();
+    await page.locator('#btnSetupReady').click();
+    await page.locator('#btnWaterReady').click();
+    await page.locator('#allBrewSteps > summary').click();
 
     // The first step card should show the "available" state (▶ tap to start).
-    const firstStep = page.locator('.step, [class*="step"]').first();
+    const firstStep = page.locator('#step0');
     await expect(firstStep).toBeVisible({ timeout: 3000 });
   });
 });

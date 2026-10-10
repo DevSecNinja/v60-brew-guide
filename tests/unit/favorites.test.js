@@ -38,7 +38,7 @@ describe('V60 Recipe Calculator — Favorites Feature', () => {
 
     test('favorites section is hidden initially (no favorites)', () => {
       const section = doc.getElementById('favoritesSection');
-      expect(section.style.display).toBe('none');
+      expect(section.hidden).toBe(true);
     });
 
     test('favorites list container exists', () => {
@@ -110,7 +110,12 @@ describe('V60 Recipe Calculator — Favorites Feature', () => {
       const testData = [{ key: '16.7:250', ratio: '16.7', water: 250 }];
       window.localStorage.setItem('v60_favorites', JSON.stringify(testData));
       const favorites = window.loadFavorites();
-      expect(favorites).toEqual(testData);
+      expect(favorites).toHaveLength(1);
+      expect(favorites[0]).toEqual({
+        ...window.makeRecipe(250, 16.7),
+        key: '16.7:250',
+        ratio: '16.7'
+      });
     });
 
     test('loadFavorites handles corrupted data gracefully', () => {
@@ -205,14 +210,14 @@ describe('V60 Recipe Calculator — Favorites Feature', () => {
     test('favorites section is shown when favorites exist', () => {
       window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
       const section = doc.getElementById('favoritesSection');
-      expect(section.style.display).not.toBe('none');
+      expect(section.hidden).toBe(false);
     });
 
     test('favorites section is hidden when all favorites are removed', () => {
       window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
       window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
       const section = doc.getElementById('favoritesSection');
-      expect(section.style.display).toBe('none');
+      expect(section.hidden).toBe(true);
     });
 
     test('favorite card is rendered for each favorite', () => {
@@ -260,6 +265,7 @@ describe('V60 Recipe Calculator — Favorites Feature', () => {
 
     test('editing a new favorite note places the input under the recipe details', () => {
       window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
+      doc.getElementById('btnManageFavorites').click();
       doc.querySelector('.btn-edit-favorite').click();
 
       const card = doc.querySelector('.favorite-card');
@@ -274,6 +280,7 @@ describe('V60 Recipe Calculator — Favorites Feature', () => {
 
       try {
         window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
+        doc.getElementById('btnManageFavorites').click();
         doc.querySelector('.btn-edit-favorite').click();
 
         expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true });
@@ -284,6 +291,7 @@ describe('V60 Recipe Calculator — Favorites Feature', () => {
 
     test('favorite note input uses iOS-safe text size', () => {
       window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
+      doc.getElementById('btnManageFavorites').click();
       doc.querySelector('.btn-edit-favorite').click();
 
       const input = doc.querySelector('.favorite-description-input');
@@ -310,7 +318,7 @@ describe('V60 Recipe Calculator — Favorites Feature', () => {
       favBtn.click();
 
       const stepsGrid = doc.getElementById('stepsGrid');
-      expect(stepsGrid.style.display).toBe('none');
+      expect(stepsGrid.hidden).toBe(true);
     });
 
     test('favorite button reflects state after page reload', () => {
@@ -396,10 +404,41 @@ describe('V60 Recipe Calculator — Favorites Feature', () => {
       expect(handles.length).toBe(2);
     });
 
-    test('favorite cards are draggable', () => {
+    test('favorite cards are draggable only while managing them', () => {
       window.toggleFavorite('16.7', 250, '15.0', '30', '150', '250');
-      const card = doc.querySelector('.favorite-card');
-      expect(card.getAttribute('draggable')).toBe('true');
+      expect(doc.querySelector('.favorite-card').getAttribute('draggable')).toBe('false');
+      expect(doc.querySelector('.favorite-card-actions').hidden).toBe(true);
+      doc.getElementById('btnManageFavorites').click();
+      expect(doc.querySelector('.favorite-card').getAttribute('draggable')).toBe('true');
+      expect(doc.querySelector('.favorite-card-actions').hidden).toBe(false);
+      doc.getElementById('btnManageFavorites').click();
+      expect(doc.querySelector('.favorite-card').getAttribute('draggable')).toBe('false');
+      expect(doc.querySelector('.favorite-card-actions').hidden).toBe(true);
+    });
+
+    test('saved recipe bars sit immediately below the three presets', () => {
+      const presets = doc.querySelector('.recipe-options');
+      const favorites = doc.getElementById('favoritesSection');
+      expect(presets.querySelectorAll('[data-quick-water]')).toHaveLength(3);
+      expect(presets.nextElementSibling).toBe(favorites);
+      expect(favorites.nextElementSibling.id).toBe('recipeAdjustments');
+      window.toggleFavorite('16.7', 250, '15.0', '50', '100', '150', '200', '250');
+      expect(favorites.hidden).toBe(false);
+      expect(favorites.tagName).toBe('SECTION');
+    });
+
+    test('repeated keyboard reorder keeps the same direction until the boundary', () => {
+      [250, 300, 500].forEach(water => window.toggleFavorite('16.7', water, (water / 16.7).toFixed(1)));
+      doc.getElementById('btnManageFavorites').click();
+      const card = () => doc.querySelector('[data-fav-water="500"]');
+      card().querySelector('[data-direction="up"]').focus();
+      doc.activeElement.click();
+      expect(window.loadFavorites().map(favorite => favorite.water)).toEqual([250, 500, 300]);
+      expect(doc.activeElement).toBe(card().querySelector('[data-direction="up"]'));
+      doc.activeElement.click();
+      expect(window.loadFavorites().map(favorite => favorite.water)).toEqual([500, 250, 300]);
+      expect(doc.activeElement).toBe(card().querySelector('[data-direction="down"]'));
+      expect(doc.getElementById('setupStage').hidden).toBe(true);
     });
   });
 });

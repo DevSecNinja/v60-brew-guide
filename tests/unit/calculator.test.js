@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
+const { confirmPreparation } = require('../helpers/brew-journey');
 
 // Load the HTML file
 const html = fs.readFileSync(path.resolve(__dirname, '../../index.html'), 'utf8');
@@ -248,17 +249,17 @@ describe('V60 Recipe Calculator — Core Logic', () => {
   describe('Brew steps — initial state', () => {
     test('steps grid is hidden before recipe selection', () => {
       const stepsGrid = doc.getElementById('stepsGrid');
-      expect(stepsGrid.style.display).toBe('none');
+      expect(stepsGrid.hidden).toBe(true);
     });
 
-    test('no-recipe notice is visible initially', () => {
-      const notice = doc.getElementById('noRecipeNotice');
-      expect(notice.style.display).not.toBe('none');
+    test('water selection is the initial prompt without an empty confirmation', () => {
+      expect(doc.querySelector('#recipeChoices > summary').textContent).toBe('How much water will you use?');
+      expect(doc.getElementById('recipeSelection').hidden).toBe(true);
     });
 
     test('prep step is hidden before recipe selection', () => {
       const prepStep = doc.getElementById('temperaturePrepStep');
-      expect(prepStep.style.display).toBe('none');
+      expect(prepStep.hidden).toBe(true);
     });
 
     test('all steps are locked initially', () => {
@@ -274,19 +275,19 @@ describe('V60 Recipe Calculator — Core Logic', () => {
       const rows = doc.querySelectorAll('#recipeTableBody tr');
       const row = Array.from(rows).find(r => r.dataset.water === String(waterAmount));
       row.click();
+      confirmPreparation(dom.window);
       return row;
     }
 
     test('clicking a row shows the steps grid', () => {
       selectRow(250);
       const stepsGrid = doc.getElementById('stepsGrid');
-      expect(stepsGrid.style.display).not.toBe('none');
+      expect(stepsGrid.hidden).toBe(false);
     });
 
     test('clicking a row hides the no-recipe notice', () => {
       selectRow(250);
-      const notice = doc.getElementById('noRecipeNotice');
-      expect(notice.style.display).toBe('none');
+      expect(doc.getElementById('journeyRecipeSummary').textContent).toContain('250 g water');
     });
 
     test('clicking a row updates the recipe label', () => {
@@ -333,7 +334,7 @@ describe('V60 Recipe Calculator — Core Logic', () => {
       selectRow(250);
       const prepStep = doc.getElementById('temperaturePrepStep');
 
-      expect(prepStep.style.display).toBe('none');
+      expect(prepStep.hidden).toBe(true);
     });
 
     test('step 1 detail contains pour 1 value (40% of water)', () => {
@@ -361,7 +362,7 @@ describe('V60 Recipe Calculator — Core Logic', () => {
       target.value = '94';
       target.dispatchEvent(new dom.window.Event('change'));
 
-      expect(prepStep.style.display).toBe('');
+      expect(prepStep.hidden).toBe(false);
       expect(prepTimer.textContent).toBe('1:00');
       expect(prepDetail.textContent).toContain('94 °C');
       expect(bloomStep.classList.contains('locked')).toBe(true);
@@ -389,6 +390,7 @@ describe('V60 Recipe Calculator — Core Logic', () => {
       const rows = doc.querySelectorAll('#recipeTableBody tr');
       const row = Array.from(rows).find(r => r.dataset.water === String(waterAmount));
       row.click();
+      confirmPreparation(dom.window);
     }
 
     test('clicking available step 0 starts a countdown', () => {
@@ -610,6 +612,7 @@ describe('V60 Recipe Calculator — Audio Completion Sound', () => {
       const rows = doc.querySelectorAll('#recipeTableBody tr');
       const row = Array.from(rows).find(r => r.dataset.water === String(waterAmount));
       row.click();
+      confirmPreparation(dom.window);
     }
 
     test('playCompletionSound is called when countdown reaches zero', () => {
@@ -843,6 +846,7 @@ describe('Shareable recipe URLs', () => {
 
     slider.value = '15';
     slider.dispatchEvent(new dom.window.Event('input'));
+    slider.dispatchEvent(new dom.window.Event('change'));
 
     const params = new dom.window.URLSearchParams(dom.window.location.search);
     expect(params.get('ratio')).toBe('1:15.0');
