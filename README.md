@@ -26,8 +26,9 @@ The single-page journey follows six numbered stages:
 
 1. **New to V60?** introduces the equipment, without making you configure a scale first.
 2. **Choose your recipe** by picking a water amount, reviewing the coffee dose,
-   and choosing *Continue to scale setup*. Ratio/dose adjustments, saved recipes
-   and the full reference table are optional, collapsed sections.
+   and choosing *Continue to scale setup*. Saved recipes appear as selectable
+   horizontal bars beneath the three water presets. Ratio/dose adjustments and
+   the full reference table are optional, collapsed sections.
 3. **Prepare your scale and coffee** using one equipment-specific checklist.
 4. **Prepare your water**, optionally using the boil-based cooling timer.
 5. **Brew** with a focused current action; expand *All brew steps* only when needed.
@@ -82,9 +83,12 @@ Water rounds to whole grams and must remain within the existing 100-500g brew
 range. For example, 15.2g at 1:16.7 produces a 254g water target. Changing the ratio
 keeps the dose fixed. Table-selected recipes instead keep water fixed.
 Ratio-only adjustments before brewing preserve completed water preparation.
-*Saved recipes* shows your favorite count and supports keyboard selection and
-Move up / Move down controls as well as drag reordering. Restored shared or
+*Saved recipes* shows your favorite count and supports keyboard selection.
+Choose *Manage* to edit/remove favorites or reorder with Move up / Move down
+or drag; *Done* returns to compact bars. Restored shared or
 last-brew recipes show a compact confirmation without changing custom quantities.
+Selecting from a long list scrolls the confirmation into view without moving
+keyboard focus. Re-selecting an unchanged recipe keeps completed preparation.
 
 After brewing, confirm the dose, enter actual water poured, and confirm or enter
 the finish time as `m:ss`. Notes are optional. Choose *Save brew* or *Skip saving*

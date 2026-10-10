@@ -48,14 +48,20 @@ disclosures rather than competing with the focused action.
 
 `recipeConfirmed`, `setupConfirmed` and `waterConfirmed` are memory-only gates.
 Recipe selection stays in step 2 without closing its editors or moving focus.
+If the confirmation is off-screen, it scrolls into view without a focus change.
+Re-selecting the identical recipe before brewing is a no-op that preserves gates
+and completed water preparation.
 Continue confirms the recipe and reveals setup; setup confirmation reveals water preparation, whose
 confirmation reveals brewing. Changing equipment requires setup confirmation again.
 Reset or Brew another one returns to water preparation. Ratio-only changes preserve
 completed preparation and existing gates when no brew has started. Reload restores
 recipes and preferences, not gates, running clocks or pending results.
 
-Step 2 starts with water presets; ratio/dose editing, saved recipes and the full
-table are closed native disclosures. The compact selected summary is announced
+Step 2 starts with three water presets and then saved recipes as full-width bars.
+Ratio/dose editing and the full table are closed native disclosures; a transient
+Manage/Done toggle exposes favorite editing, deletion and reorder controls.
+The selection live region is permanently mounted, including before the first
+choice. The compact selected summary is announced
 only when it changes, not on each brew tick. Restored recipes start with the recipe
 editor collapsed and still require Continue. Favorites use native selection
 buttons and keyboard reorder controls with focus retained across re-rendering.

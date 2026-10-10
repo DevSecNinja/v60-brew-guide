@@ -1890,6 +1890,7 @@
     .recipe-primary:hover { background: #5D4037; }
     .recipe-selection { background: var(--cream-light); border-radius: var(--radius-sm); padding: 0.85rem; margin-top: 1rem; }
     .recipe-selection .journey-status { margin: 0; }
+    #journeyRecipeSummary:empty { margin: 0; }
     .recipe-ratio-label { display: block; margin: 0.5rem 0; font-weight: 600; }
     #recipeAdjustments .slider-bottom-row { flex-wrap: wrap; gap: 0.5rem; }
     #recipeAdjustments .btn-reset-ratio { margin-left: 0; }
@@ -1899,6 +1900,13 @@
     .favorite-card-header { flex-wrap: wrap; }
     .favorite-card-actions { flex-wrap: wrap; }
     .btn-move-favorite { min-height: 44px; padding: 0.4rem; }
+    .saved-recipes-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .saved-recipes-header h3 { font-size: 0.9rem; font-weight: 600; }
+    #favoritesSection .favorite-card-content { padding: 0.35rem 0.75rem; }
+    #favoritesSection .favorite-card-recipe { font-size: 0.85rem; }
+    #favoritesSection .favorite-card-description { margin: 0; padding: 0 0 0.4rem; border: 0; }
+    #favoritesSection .favorite-description-text { overflow-wrap: anywhere; }
+    #favoritesSection .favorites-list { gap: 0.5rem; }
   </style>
 </head>
 <body>
@@ -1949,6 +1957,14 @@
           <button type="button" class="companion-button" data-quick-water="300" aria-pressed="false">300 g</button>
           <button type="button" class="companion-button" data-quick-water="500" aria-pressed="false">500 g</button>
         </div>
+        <section id="favoritesSection" aria-labelledby="favoritesSummary" hidden>
+          <div class="saved-recipes-header">
+            <h3 id="favoritesSummary">Saved recipes (0)</h3>
+            <button type="button" id="btnManageFavorites" class="btn-reset-brew" aria-expanded="false" aria-controls="favoritesList">Manage</button>
+          </div>
+          <p id="favoritesManageHint" class="favorites-hint" hidden>Edit notes, remove recipes, or reorder with Move up / Move down or drag.</p>
+          <div id="favoritesList" class="favorites-list"></div>
+        </section>
         <details id="recipeAdjustments" class="journey-details">
           <summary>Adjust ratio or use weighed coffee</summary>
           <label for="ratioSlider" class="recipe-ratio-label">Coffee-to-water ratio</label>
@@ -1978,11 +1994,6 @@
             <p id="doseFeedback" role="status"></p>
           </form>
         </details>
-        <details class="journey-details" id="favoritesSection" hidden>
-          <summary id="favoritesSummary">Saved recipes (0)</summary>
-          <p class="favorites-hint">Choose a saved recipe. Edit notes or reorder with Move up / Move down or drag.</p>
-          <div id="favoritesList" class="favorites-list"></div>
-        </details>
         <details id="recipeReference" class="journey-details">
           <summary>More water amounts (100-500 g)</summary>
           <div class="table-wrapper">
@@ -2004,8 +2015,8 @@
           </div>
         </details>
       </details>
+      <p id="journeyRecipeSummary" class="journey-status" role="status" aria-atomic="true"></p>
       <div id="recipeSelection" class="recipe-selection" hidden>
-        <p id="journeyRecipeSummary" class="journey-status" role="status" aria-atomic="true"></p>
         <div class="companion-actions">
           <button type="button" id="btnRecipeNext" class="companion-button recipe-primary" hidden>Continue to scale setup</button>
           <button type="button" class="btn-reset-brew" id="btnFavoriteRecipe" hidden>Save favorite</button>
@@ -2471,6 +2482,7 @@
 
     // --- Favorites state ---
     const FAVORITES_KEY = 'v60_favorites';
+    let favoritesManaging = false;
 
     function loadFavorites() {
       const saved = readJSONStorage(FAVORITES_KEY, []);
@@ -2665,13 +2677,21 @@
       const activeClass = active?.tagName === 'BUTTON' ? active.className.split(' ')[0] : null;
       byId('favoritesSummary').textContent = `Saved recipes (${favorites.length})`;
       if (favorites.length === 0) {
+        favoritesManaging = false;
         favoritesSection.hidden = true;
         favoritesList.replaceChildren();
-        if (activeKey) byId('btnFavoriteRecipe').focus({ preventScroll: true });
+        if (activeKey) {
+          const target = byId('btnFavoriteRecipe').hidden
+            ? document.querySelector('[data-quick-water="250"]') : byId('btnFavoriteRecipe');
+          target.focus({ preventScroll: true });
+        }
         return;
       }
 
       favoritesSection.hidden = false;
+      byId('btnManageFavorites').textContent = favoritesManaging ? 'Done' : 'Manage';
+      byId('btnManageFavorites').setAttribute('aria-expanded', String(favoritesManaging));
+      byId('favoritesManageHint').hidden = !favoritesManaging;
       let html = '';
 
       favorites.forEach((fav, index) => {
@@ -2683,15 +2703,15 @@
           ? `<div class="favorite-card-description"><span class="favorite-description-text" data-key="${safeKey}">${escapeHtml(fav.description)}</span></div>`
           : '';
 
-        html += `<div class="favorite-card${isSelected ? ' selected' : ''}" draggable="true" data-fav-key="${safeKey}" data-fav-ratio="${escapeHtml(fav.ratio)}" data-fav-water="${escapeHtml(fav.water)}" data-fav-coffee="${escapeHtml(fav.coffee)}" data-fav-basis="${fav.basis === 'dose' ? 'dose' : 'water'}">
-          <span class="favorite-drag-handle" aria-label="Drag to reorder" title="Drag to reorder">☰</span>
+        html += `<div class="favorite-card${isSelected ? ' selected' : ''}" draggable="${favoritesManaging}" data-fav-key="${safeKey}" data-fav-ratio="${escapeHtml(fav.ratio)}" data-fav-water="${escapeHtml(fav.water)}" data-fav-coffee="${escapeHtml(fav.coffee)}" data-fav-basis="${fav.basis === 'dose' ? 'dose' : 'water'}">
+          <span class="favorite-drag-handle" aria-label="Drag to reorder" title="Drag to reorder"${favoritesManaging ? '' : ' hidden'}>☰</span>
           <div class="favorite-card-content">
             <div class="favorite-card-header">
               <button type="button" class="btn-select-favorite" aria-pressed="${isSelected}"${isBrewTimerRunning() || pendingBrew ? ' disabled' : ''}>
                 <span class="favorite-card-recipe">${escapeHtml(fav.water)}g water / ${escapeHtml(fav.coffee)}g coffee</span>
                 <span class="favorite-card-ratio">1:${parseFloat(fav.ratio).toFixed(1)}</span>
               </button>
-              <div class="favorite-card-actions">
+              <div class="favorite-card-actions"${favoritesManaging ? '' : ' hidden'}>
                 <button type="button" class="btn-edit-favorite" data-key="${safeKey}" aria-label="Edit note" title="Edit note">✏</button>
                 <button type="button" class="btn-remove-favorite" data-key="${safeKey}" aria-label="Remove favorite" title="Remove favorite">✕</button>
                 <button type="button" class="btn-move-favorite companion-button" data-key="${safeKey}" data-direction="up"${index === 0 ? ' disabled' : ''}>Move up</button>
@@ -2721,7 +2741,9 @@
           const key = button.dataset.key;
           moveFavorite(key, button.dataset.direction);
           const card = Array.from(favoritesList.querySelectorAll('.favorite-card')).find(item => item.dataset.favKey === key);
-          card?.querySelector('.btn-select-favorite').focus({ preventScroll: true });
+          const sameDirection = card?.querySelector(`[data-direction="${button.dataset.direction}"]`);
+          const target = sameDirection?.disabled ? card.querySelector('.btn-move-favorite:not(:disabled)') : sameDirection;
+          target?.focus({ preventScroll: true });
         });
       });
 
@@ -2805,11 +2827,11 @@
     }
 
     function selectFavoriteRecipe(card) {
-      restoreRecipe({
+      if (restoreRecipe({
         water: Number(card.dataset.favWater),
         coffee: card.dataset.favCoffee,
         basis: card.dataset.favBasis
-      }, Number(card.dataset.favRatio));
+      }, Number(card.dataset.favRatio))) showRecipeConfirmation();
     }
 
     // --- Last Brew Persistence ---
@@ -2903,6 +2925,15 @@
       byId('recipeChoices').open = false;
       renderJourney();
       focusJourneyStage('setupHeading');
+    }
+
+    function showRecipeConfirmation() {
+      const confirmation = byId('recipeSelection');
+      const bounds = confirmation.getBoundingClientRect();
+      if ((bounds.top < 0 || bounds.bottom > window.innerHeight) && typeof confirmation.scrollIntoView === 'function') {
+        const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        confirmation.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
+      }
     }
 
     function renderJourney() {
@@ -3681,7 +3712,7 @@
         row.addEventListener('click', (e) => {
           // Don't select recipe when clicking the favorite button
           if (e.target.closest('.btn-favorite')) return;
-          selectRecipe(row);
+          if (selectRecipe(row)) showRecipeConfirmation();
         });
       });
 
@@ -3726,6 +3757,8 @@
       byId('ratioFeedback').textContent = '';
       byId('doseFeedback').textContent = '';
       byId('coffeeDose').removeAttribute('aria-invalid');
+      if (selectedRecipe && !hasStartedBrewSteps() &&
+          ['water', 'coffee', 'ratio', 'basis'].every(key => selectedRecipe[key] === recipe[key])) return;
       const { water, coffee, bloom, pour1, pour2, pour3, pour4 } = recipe;
       selectedRecipe = recipe;
       if (!preserveJourney) {
@@ -4396,6 +4429,7 @@
       }
       if (restoreRecipe({ water, coffee: dose, basis: 'dose' }, ratio)) {
         byId('doseFeedback').textContent = `${dose.toFixed(1)} g coffee uses ${water} g water (rounded to whole grams).`;
+        showRecipeConfirmation();
       }
     });
     byId('coffeeDose').addEventListener('input', () => {
@@ -4407,6 +4441,10 @@
       const r = selectedRecipe;
       toggleFavorite(r.ratio.toFixed(1), r.water, r.coffee, r.bloom, r.pour1, r.pour2, r.pour3, r.pour4, r.basis);
       generateTable(r.ratio);
+    });
+    byId('btnManageFavorites').addEventListener('click', () => {
+      favoritesManaging = !favoritesManaging;
+      renderFavorites();
     });
     window.addEventListener('beforeunload', event => {
       if (isBrewTimerRunning() || pendingBrew) {
@@ -4422,7 +4460,7 @@
     byId('btnRecipeNext').addEventListener('click', continueFromRecipe);
     document.querySelectorAll('[data-quick-water]').forEach(button => {
       button.addEventListener('click', () => {
-        selectRecipeByWater(Number(button.dataset.quickWater));
+        if (selectRecipeByWater(Number(button.dataset.quickWater))) showRecipeConfirmation();
       });
     });
     byId('btnSetupReady').addEventListener('click', () => {

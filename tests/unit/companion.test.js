@@ -442,6 +442,34 @@ describe('Scale companion', () => {
     mutations.disconnect();
   });
 
+  test('the empty selection live region is mounted before the first choice', () => {
+    expect(get('journeyRecipeSummary').closest('[hidden]')).toBeNull();
+    expect(get('journeyRecipeSummary').getAttribute('role')).toBe('status');
+    expect(get('journeyRecipeSummary').textContent).toBe('');
+    expect(get('recipeSelection').hidden).toBe(true);
+  });
+
+  test('reselecting the same preset, table row or favorite keeps completed preparation', () => {
+    change('temperatureEstimatorTarget', '94');
+    select();
+    get('btnFavoriteRecipe').click();
+    get('temperaturePrepStep').click();
+    get('temperaturePrepStep').click();
+    get('btnWaterReady').click();
+    const choices = [
+      doc.querySelector('[data-quick-water="250"]'),
+      doc.querySelector('#recipeTableBody tr[data-water="250"]'),
+      doc.querySelector('.btn-select-favorite')
+    ];
+    for (const choice of choices) {
+      choice.click();
+      expect(get('temperaturePrepStep').classList.contains('completed')).toBe(true);
+      expect(get('setupStage').hidden).toBe(false);
+      expect(get('waterStage').hidden).toBe(false);
+      expect(get('brewStage').hidden).toBe(false);
+    }
+  });
+
   test('successful selection and reset clear obsolete companion warnings', () => {
     create({ url: 'http://localhost/?water=250garbage' });
     expect(get('companionMessage').hidden).toBe(false);

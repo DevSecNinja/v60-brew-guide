@@ -233,29 +233,67 @@ test.describe('Scale companion on mobile', () => {
     await expect(page.locator('#recipeAdjustments')).toHaveAttribute('open', '');
   });
 
-  test('saved recipes support keyboard selection and reordering without leaving Step 2', async ({ page }) => {
+  test('saved recipe bars support keyboard selection and management without leaving Step 2', async ({ page }, testInfo) => {
     await page.locator('[data-quick-water="250"]').click();
     await page.locator('#btnFavoriteRecipe').click();
     await page.locator('[data-quick-water="300"]').click();
     await page.locator('#btnFavoriteRecipe').click();
     await expect(page.locator('#favoritesSummary')).toHaveText('Saved recipes (2)');
-    await expect(page.locator('#favoritesSection')).not.toHaveAttribute('open', '');
-    await page.locator('#favoritesSummary').click();
+    await expect(page.locator('.btn-select-favorite')).toHaveCount(2);
+    await expect(page.locator('.btn-select-favorite').first()).toBeVisible();
+    await expect(page.locator('.favorite-card-actions').first()).not.toBeVisible();
+    const presets = await page.locator('.recipe-options').boundingBox();
+    const bars = await page.locator('#favoritesList').boundingBox();
+    expect(bars.y).toBeGreaterThan(presets.y + presets.height);
+    await page.setViewportSize({ width: 320, height: 700 });
+    expect(await page.locator('.favorite-card').evaluateAll(cards =>
+      cards.every(card => card.scrollWidth <= card.clientWidth && card.clientHeight < 100))).toBe(true);
+    await page.locator('#recipeStage').screenshot({ path: testInfo.outputPath('saved-recipe-bars.png') });
     const saved250 = page.locator('.btn-select-favorite').filter({ hasText: '250g water' });
     await saved250.focus();
     await saved250.press('Enter');
     await expect(saved250).toBeFocused();
     await expect(saved250).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('#setupStage')).not.toBeVisible();
+    await page.locator('#btnManageFavorites').click();
+    await expect(page.locator('#btnManageFavorites')).toHaveAttribute('aria-expanded', 'true');
     const moveDown = page.locator('.favorite-card').filter({ hasText: '250g water' }).getByRole('button', { name: 'Move down', exact: true });
     await moveDown.focus();
     await moveDown.press('Enter');
     await expect(page.locator('.btn-select-favorite').last()).toContainText('250g water');
-    await expect(saved250).toBeFocused();
+    await expect(page.locator('.favorite-card').filter({ hasText: '250g water' }).getByRole('button', { name: 'Move up', exact: true })).toBeFocused();
+    await page.locator('#btnManageFavorites').click();
+    await expect(page.locator('.favorite-card-actions').first()).not.toBeVisible();
     await page.reload();
     await page.locator('#recipeChoices > summary').click();
-    await page.locator('#favoritesSummary').click();
+    await expect(page.locator('.btn-select-favorite').first()).toBeVisible();
+    await expect(page.locator('#btnManageFavorites')).toHaveAttribute('aria-expanded', 'false');
     await expect(page.locator('.btn-select-favorite').last()).toContainText('250g water');
+  });
+
+  test('a table selection brings Continue into the viewport without changing focus', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 664 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.locator('#recipeReference > summary').click();
+    const recipe = page.getByRole('button', { name: 'Use 420 g water recipe', exact: true });
+    await recipe.focus();
+    await recipe.press('Enter');
+    await expect(recipe).toBeFocused();
+    await expect(page.locator('#btnRecipeNext')).toBeInViewport({ ratio: 1 });
+    await expect(page.locator('#setupStage')).not.toBeVisible();
+  });
+
+  test('removing the last saved recipe returns keyboard focus to a visible preset', async ({ page }) => {
+    await page.locator('[data-quick-water="250"]').click();
+    await page.locator('#btnFavoriteRecipe').click();
+    await page.goto('/');
+    await expect(page.locator('#recipeSelection')).not.toBeVisible();
+    await page.locator('#btnManageFavorites').click();
+    const remove = page.getByRole('button', { name: 'Remove favorite', exact: true });
+    await remove.focus();
+    await remove.press('Enter');
+    await expect(page.locator('#favoritesSection')).not.toBeVisible();
+    await expect(page.locator('[data-quick-water="250"]')).toBeFocused();
   });
 });
 
