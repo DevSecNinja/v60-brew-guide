@@ -1888,9 +1888,19 @@
     .recipe-options [aria-pressed="true"] { border: 2px solid var(--selected-border); background: var(--selected-bg); }
     .recipe-primary { width: 100%; background: #3E2723; color: #FFFFFF; }
     .recipe-primary:hover { background: #5D4037; }
-    .recipe-selection { background: var(--cream-light); border-radius: var(--radius-sm); padding: 0.85rem; margin-top: 1rem; }
-    .recipe-selection .journey-status { margin: 0; }
-    #journeyRecipeSummary:empty { margin: 0; }
+    .recipe-selection {
+      background: var(--selected-bg);
+      border: 1px solid var(--selected-border);
+      border-left-width: 4px;
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+      margin-top: 1rem;
+    }
+    .recipe-selection h3 { font-size: 1rem; color: var(--text-primary); }
+    .recipe-selection-values { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; margin: 1rem 0; }
+    .recipe-selection-values dt { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.25rem; }
+    .recipe-selection-values dd { margin: 0; font-size: clamp(1.1rem, 5vw, 1.5rem); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
     .recipe-ratio-label { display: block; margin: 0.5rem 0; font-weight: 600; }
     #recipeAdjustments .slider-bottom-row { flex-wrap: wrap; gap: 0.5rem; }
     #recipeAdjustments .btn-reset-ratio { margin-left: 0; }
@@ -2015,14 +2025,20 @@
           </div>
         </details>
       </details>
-      <p id="journeyRecipeSummary" class="journey-status" role="status" aria-atomic="true"></p>
-      <div id="recipeSelection" class="recipe-selection" hidden>
+      <p id="journeyRecipeSummary" class="visually-hidden" role="status" aria-atomic="true"></p>
+      <section id="recipeSelection" class="recipe-selection" aria-labelledby="recipeSelectionHeading" hidden>
+        <h3 id="recipeSelectionHeading">Your selected recipe</h3>
+        <dl class="recipe-selection-values">
+          <div><dt>Water</dt><dd id="selectedWater"></dd></div>
+          <div><dt>Coffee</dt><dd id="selectedCoffee"></dd></div>
+          <div><dt>Ratio</dt><dd id="selectedRatio"></dd></div>
+        </dl>
         <div class="companion-actions">
           <button type="button" id="btnRecipeNext" class="companion-button recipe-primary" hidden>Continue to scale setup</button>
           <button type="button" class="btn-reset-brew" id="btnFavoriteRecipe" hidden>Save favorite</button>
           <button type="button" class="btn-reset-brew" id="btnShareRecipe" title="Share this recipe" hidden>Share</button>
         </div>
-      </div>
+      </section>
     </section>
     <section id="setupStage" class="companion-card" aria-labelledby="setupHeading" hidden>
       <h2 id="setupHeading" class="journey-heading" tabindex="-1">3 — Prepare your scale and coffee</h2>
@@ -2952,7 +2968,12 @@
       byId('btnResetBrew').disabled = !selectedRecipe;
       byId('recipeSelection').hidden = !selectedRecipe;
       const summary = selectedRecipe ? `${selectedRecipe.water} g water · ${selectedRecipe.coffee} g coffee · 1:${selectedRecipe.ratio.toFixed(1)}` : '';
-      if (byId('journeyRecipeSummary').textContent !== summary) byId('journeyRecipeSummary').textContent = summary;
+      if (byId('journeyRecipeSummary').textContent !== summary) {
+        byId('journeyRecipeSummary').textContent = summary;
+        byId('selectedWater').textContent = selectedRecipe ? `${selectedRecipe.water} g` : '';
+        byId('selectedCoffee').textContent = selectedRecipe ? `${selectedRecipe.coffee} g` : '';
+        byId('selectedRatio').textContent = selectedRecipe ? `1:${selectedRecipe.ratio.toFixed(1)}` : '';
+      }
       byId('setupSummary').textContent = selectedRecipe
         ? `${brewSetup.scale === 'k112' ? 'K112 ' + (brewSetup.mode === 'auto' ? 'automatic' : 'manual') : 'Any scale'} | ${brewSetup.timer === 'app' ? 'App-guided' : 'Scale-timed'} | Weigh ${selectedRecipe.coffee} g coffee.`
         : '';

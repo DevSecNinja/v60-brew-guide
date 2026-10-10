@@ -60,8 +60,9 @@ recipes and preferences, not gates, running clocks or pending results.
 Step 2 starts with three water presets and then saved recipes as full-width bars.
 Ratio/dose editing and the full table are closed native disclosures; a transient
 Manage/Done toggle exposes favorite editing, deletion and reorder controls.
-The selection live region is permanently mounted, including before the first
-choice. The compact selected summary is announced
+The selection live region is permanently mounted and visually hidden, including
+before the first choice. A highlighted, labeled confirmation card presents water,
+coffee and ratio together with Continue. The selected summary is announced
 only when it changes, not on each brew tick. Restored recipes start with the recipe
 editor collapsed and still require Continue. Favorites use native selection
 buttons and keyboard reorder controls with focus retained across re-rendering.

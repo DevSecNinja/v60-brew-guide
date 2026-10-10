@@ -29,6 +29,8 @@ The single-page journey follows six numbered stages:
    and choosing *Continue to scale setup*. Saved recipes appear as selectable
    horizontal bars beneath the three water presets. Ratio/dose adjustments and
    the full reference table are optional, collapsed sections.
+   A highlighted *Your selected recipe* card groups the resulting water, coffee
+   and ratio with the Continue action.
 3. **Prepare your scale and coffee** using one equipment-specific checklist.
 4. **Prepare your water**, optionally using the boil-based cooling timer.
 5. **Brew** with a focused current action; expand *All brew steps* only when needed.

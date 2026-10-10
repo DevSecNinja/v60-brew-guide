@@ -202,6 +202,10 @@ test.describe('Scale companion on mobile', () => {
     await expect(choice).toBeFocused();
     await expect(choice).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('#journeyRecipeSummary')).toHaveText('250 g water · 15.0 g coffee · 1:16.7');
+    await expect(page.getByRole('region', { name: 'Your selected recipe' })).toBeVisible();
+    await expect(page.locator('#selectedWater')).toHaveText('250 g');
+    await expect(page.locator('#selectedCoffee')).toHaveText('15.0 g');
+    await expect(page.locator('#selectedRatio')).toHaveText('1:16.7');
     await expect(page.locator('#setupStage')).not.toBeVisible();
     await page.locator('#recipeStage').screenshot({ path: testInfo.outputPath('recipe-selected.png') });
     await page.setViewportSize({ width: 320, height: 700 });
@@ -209,6 +213,8 @@ test.describe('Scale companion on mobile', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(await page.locator('[data-quick-water]').evaluateAll(buttons =>
       buttons.every(button => button.scrollWidth <= button.clientWidth))).toBe(true);
+    expect(await page.locator('.recipe-selection-values dd').evaluateAll(values =>
+      values.every(value => value.scrollWidth <= value.clientWidth))).toBe(true);
     await page.locator('#recipeStage').screenshot({ path: testInfo.outputPath('recipe-selected-dark-narrow.png') });
     await page.locator('#btnRecipeNext').click();
     await expect(page.locator('#setupHeading')).toBeFocused();

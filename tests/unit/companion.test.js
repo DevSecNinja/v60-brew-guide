@@ -449,6 +449,29 @@ describe('Scale companion', () => {
     expect(get('recipeSelection').hidden).toBe(true);
   });
 
+  test('the selected-recipe card groups labeled amounts and Continue', () => {
+    win.selectRecipeByWater(300);
+    expect(get('recipeSelection').hidden).toBe(false);
+    expect(get('recipeSelection').getAttribute('aria-labelledby')).toBe('recipeSelectionHeading');
+    expect(get('recipeSelectionHeading').textContent).toBe('Your selected recipe');
+    expect(Array.from(get('recipeSelection').querySelectorAll('dt'), label => label.textContent)).toEqual(['Water', 'Coffee', 'Ratio']);
+    expect(get('selectedWater').textContent).toBe('300 g');
+    expect(get('selectedCoffee').textContent).toBe('18.0 g');
+    expect(get('selectedRatio').textContent).toBe('1:16.7');
+    expect(get('recipeSelection').contains(get('btnRecipeNext'))).toBe(true);
+    expect(get('setupStage').hidden).toBe(true);
+  });
+
+  test('selected-recipe metrics update with custom doses and ratio changes', () => {
+    useDose('15.2');
+    expect(get('selectedWater').textContent).toBe('254 g');
+    expect(get('selectedCoffee').textContent).toBe('15.2 g');
+    change('ratioSlider', '16');
+    expect(get('selectedWater').textContent).toBe('243 g');
+    expect(get('selectedCoffee').textContent).toBe('15.2 g');
+    expect(get('selectedRatio').textContent).toBe('1:16.0');
+  });
+
   test('reselecting the same preset, table row or favorite keeps completed preparation', () => {
     change('temperatureEstimatorTarget', '94');
     select();
