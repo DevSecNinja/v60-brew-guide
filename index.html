@@ -2454,7 +2454,7 @@
     function readJSONStorage(key, fallback, errorFallback = fallback) {
       try {
         const raw = localStorage.getItem(key);
-        return raw ? JSON.parse(raw) : fallback;
+        return raw === null ? fallback : JSON.parse(raw);
       } catch (e) {
         reportStorageError(e);
         return errorFallback;
@@ -2506,24 +2506,29 @@
         reportStorageError(new Error('Invalid favorites'));
         return [];
       }
-      const valid = saved.filter(favorite => {
+      const keys = new Set();
+      const valid = saved.flatMap(favorite => {
         if (!favorite || typeof favorite !== 'object' || Array.isArray(favorite) ||
             typeof favorite.key !== 'string' || !Number.isInteger(favorite.water) ||
             favorite.water < 100 || favorite.water > 500 ||
-            ![undefined, 'water', 'dose'].includes(favorite.basis)) return false;
+            !['number', 'string'].includes(typeof favorite.ratio) ||
+            ![undefined, 'water', 'dose'].includes(favorite.basis)) return [];
         const ratio = parseRatioParam(favorite.ratio);
-        if (ratio === null) return false;
-        if (favorite.basis === 'dose') {
-          if (!['number', 'string'].includes(typeof favorite.coffee)) return false;
-          try {
-            makeRecipe(favorite.water, ratio, Number(favorite.coffee));
-          } catch {
-            return false;
-          }
+        if (ratio === null) return [];
+        if (favorite.basis === 'dose' && !['number', 'string'].includes(typeof favorite.coffee)) return [];
+        let recipe;
+        try {
+          recipe = makeRecipe(favorite.water, ratio, favorite.basis === 'dose' ? Number(favorite.coffee) : null);
+        } catch {
+          return [];
         }
-        return true;
+        const canonicalRatio = recipe.ratio.toFixed(1);
+        const key = getFavoriteKey(canonicalRatio, recipe.water, recipe.coffee, recipe.basis);
+        if (keys.has(key)) return [];
+        keys.add(key);
+        return [{ ...favorite, ...recipe, ratio: canonicalRatio, key }];
       });
-      if (valid.length !== saved.length) reportStorageError(new Error('Unreadable favorite entries were excluded; valid favorites remain available'));
+      if (valid.length !== saved.length) reportStorageError(new Error('Unreadable or duplicate favorite entries were excluded; valid favorites remain available'));
       return valid;
     }
 

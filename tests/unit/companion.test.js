@@ -378,13 +378,27 @@ describe('Scale companion', () => {
     expect(get('temperatureEstimatorTimeline').textContent).toContain('120s');
   });
 
-  test.each(['not-json', '{}', '[null]'])('corrupt history %s is reported and not overwritten', raw => {
+  test.each(['', '   ', 'not-json', '{}', '[null]'])('corrupt history %s is reported and not overwritten', raw => {
     create({ storage: { v60_history: raw } });
     expect(get('brewHistory').textContent).toContain('not been overwritten');
     finishApp();
     save();
     expect(get('brewResult').hidden).toBe(false);
     expect(win.localStorage.getItem('v60_history')).toBe(raw);
+  });
+
+  test('empty stored history requires explicit recovery before a pending result can be saved', () => {
+    create({ storage: { v60_history: '' } });
+    expect(get('historyRecovery').hidden).toBe(false);
+    finishApp();
+    save();
+    expect(win.localStorage.getItem('v60_history')).toBe('');
+    expect(get('brewResult').hidden).toBe(false);
+    get('btnResetHistory').click();
+    expect(win.localStorage.getItem('v60_history')).toBeNull();
+    save();
+    expect(history()).toHaveLength(1);
+    expect(get('brewResult').hidden).toBe(true);
   });
 
   test('stages stay mounted but require explicit preparation before starting', () => {
@@ -716,6 +730,50 @@ describe('Scale companion', () => {
     expect(get('selectedWater').textContent).toBe('254 g');
     expect(get('selectedCoffee').textContent).toBe('15.2 g');
     expect(new URL(win.location.href).searchParams.get('coffee')).toBe('15.2');
+  });
+
+  test.each([undefined, 'abc', '<img src=x>', -1, { bad: 'coffee' }])('legacy favorite coffee %p is recomputed without changing metadata', coffee => {
+    const entry = { key: 'legacy-key', water: 250, ratio: '1:16.7', coffee,
+      description: 'Morning cup', extra: { grinder: 'K6' }, bloom: 'incorrect' };
+    const raw = JSON.stringify([entry]);
+    create({ storage: { v60_favorites: raw } });
+    expect(win.localStorage.getItem('v60_favorites')).toBe(raw);
+    expect(win.loadFavorites()[0]).toEqual({
+      ...entry, ...win.makeRecipe(250, 16.7), key: '16.7:250', ratio: '16.7'
+    });
+    expect(get('favoritesList').textContent).toContain('250g water / 15.0g coffee');
+    expect(get('favoritesList').textContent).toContain('1:16.7');
+    expect(get('favoritesList').querySelector('img')).toBeNull();
+    doc.querySelector('.btn-select-favorite').click();
+    expect(get('selectedCoffee').textContent).toBe('15.0 g');
+    expect(get('selectedRatio').textContent).toBe('1:16.7');
+    expect(get('btnFavoriteRecipe').textContent).toBe('Remove favorite');
+    win.updateFavoriteDescription('16.7:250', 'Updated note');
+    expect(JSON.parse(win.localStorage.getItem('v60_favorites'))[0]).toMatchObject({
+      key: '16.7:250', coffee: '15.0', ratio: '16.7', description: 'Updated note', extra: { grinder: 'K6' }
+    });
+    get('btnFavoriteRecipe').click();
+    expect(win.loadFavorites()).toHaveLength(0);
+  });
+
+  test('normalization keeps distinct water and dose recipes but excludes duplicate identities with a warning', () => {
+    const entries = [
+      { key: 'legacy', water: 240, ratio: '1:16', description: 'Keep first' },
+      { key: '16.0:240', water: 240, ratio: '16.0', coffee: '15.0' },
+      { key: 'dose-key', water: 240, ratio: '1:16', coffee: 15, basis: 'dose', description: 'Weighed dose' }
+    ];
+    const raw = JSON.stringify(entries);
+    create({ storage: { v60_favorites: raw } });
+    expect(win.loadFavorites().map(favorite => favorite.key)).toEqual(['16.0:240', '16.0:240:dose:15.0']);
+    expect(win.loadFavorites().map(favorite => favorite.description)).toEqual(['Keep first', 'Weighed dose']);
+    expect(get('storageWarning').hidden).toBe(false);
+    expect(win.localStorage.getItem('v60_favorites')).toBe(raw);
+  });
+
+  test.each([{}, [], ['16.7'], true, null])('favorite ratio %p cannot bypass ratio validation', ratio => {
+    create({ storage: { v60_favorites: JSON.stringify([{ key: 'x', water: 250, ratio }]) } });
+    expect(win.loadFavorites()).toHaveLength(0);
+    expect(get('storageWarning').hidden).toBe(false);
   });
 
   test('conflicting share parameters explain why dose determines water', () => {

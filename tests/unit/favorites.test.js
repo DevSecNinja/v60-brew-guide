@@ -110,7 +110,12 @@ describe('V60 Recipe Calculator — Favorites Feature', () => {
       const testData = [{ key: '16.7:250', ratio: '16.7', water: 250 }];
       window.localStorage.setItem('v60_favorites', JSON.stringify(testData));
       const favorites = window.loadFavorites();
-      expect(favorites).toEqual(testData);
+      expect(favorites).toHaveLength(1);
+      expect(favorites[0]).toEqual({
+        ...window.makeRecipe(250, 16.7),
+        key: '16.7:250',
+        ratio: '16.7'
+      });
     });
 
     test('loadFavorites handles corrupted data gracefully', () => {

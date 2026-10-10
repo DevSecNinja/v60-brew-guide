@@ -166,6 +166,10 @@ favorites and last brews are restored as water-first recipes. Invalid favorite
 entries are filtered with a visible warning rather than aborting initialization.
 Dose favorites must have a supported basis and a finite 0.1g coffee amount that
 reproduces their whole-gram water target at the saved ratio.
+Every accepted favorite is normalized through `makeRecipe` and `getFavoriteKey`,
+preserving notes and other metadata while computing water-first coffee/pour values
+and canonical ratios/keys. Duplicate identities retain the first valid entry with
+a warning. Reading favorites does not rewrite the stored payload.
 
 Recipe restoration itself never requests notification permission. Continue
 requests permission for app-timed recipes on an explicit gesture, after history
@@ -189,6 +193,8 @@ rendering; stored free-form values are escaped. Malformed history is not overwri
 An explicit, confirmed recovery action removes only the history key and retains
 current unsaved inputs, setup and favorites. History is local-only with individual
 deletion, no implicit retention cutoff, backend or new runtime dependencies.
+Only an absent storage key uses the missing-data default; a stored empty string
+is unreadable data and must follow the same explicit history recovery flow.
 
 ## Styling & Theming
 

@@ -319,6 +319,23 @@ test.describe('Scale companion on mobile', () => {
     await expect(page.locator('#favoritesSection')).not.toBeVisible();
     await expect(page.locator('[data-quick-water="250"]')).toBeFocused();
   });
+
+  test('legacy favorites display the normalized recipe and do not create duplicate saves', async ({ page }) => {
+    await page.evaluate(() => localStorage.setItem('v60_favorites', JSON.stringify([
+      { key: 'x', water: 250, ratio: '1:16.7', coffee: 'abc', description: 'Morning cup' }
+    ])));
+    await page.reload();
+    const favorite = page.locator('.btn-select-favorite');
+    await expect(favorite).toHaveText('250g water / 15.0g coffee 1:16.7');
+    await expect(page.locator('.favorite-description-text')).toHaveText('Morning cup');
+    await favorite.click();
+    await expect(page.locator('#selectedCoffee')).toHaveText('15.0 g');
+    await expect(page.locator('#selectedRatio')).toHaveText('1:16.7');
+    await expect(page.locator('#btnFavoriteRecipe')).toHaveText('Remove favorite');
+    await page.locator('#btnFavoriteRecipe').click();
+    await expect(page.locator('#favoritesSection')).not.toBeVisible();
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('v60_favorites')))).toEqual([]);
+  });
 });
 
 test('custom recipe and scale setup restore offline', async ({ page }) => {
