@@ -83,6 +83,11 @@ describe('Scale companion', () => {
     change('k112Mode', mode);
     expect(get('scaleChecklist').textContent).toContain('ZERO/POWER');
     expect(get('scaleChecklist').textContent).toContain('Do not tare between pours');
+    const checklist = get('scaleChecklist').querySelectorAll('li');
+    expect(checklist[0].textContent).toMatch(/^Fold and fit/);
+    expect(checklist[1].textContent).toMatch(/^Switch the K112 on/);
+    expect(get('scaleChecklist').textContent).not.toContain('medium-fine');
+    expect(get('k112Safety').textContent).not.toContain('limit includes');
     expect(get('k112Safety').hidden).toBe(false);
     expect(get('modeGuidance').textContent).toContain('The app times');
     if (mode === 'auto') expect(get('autoModeGuidance').textContent).toContain('experimental');
@@ -156,7 +161,7 @@ describe('Scale companion', () => {
     expect(get('ratioDisplay').textContent).toBe('1:14.0');
     expect(get('brewRecipeLabel').textContent).toContain('500g water / 35.7g coffee');
     expect(win.location.href).toBe(url);
-    expect(get('companionMessage').hidden).toBe(false);
+    expect(get('ratioFeedback').textContent).toContain('100-500 g');
   });
 
   test('ratio changes update the selected water-first recipe too', () => {
@@ -384,6 +389,8 @@ describe('Scale companion', () => {
   test('stages stay mounted but require explicit preparation before starting', () => {
     const startDelay = get('startDelay');
     win.selectRecipeByWater(250);
+    expect(get('setupStage').hidden).toBe(true);
+    get('btnRecipeNext').click();
     expect(get('setupStage').hidden).toBe(false);
     expect(get('waterStage').hidden).toBe(true);
     expect(get('brewStage').hidden).toBe(true);
@@ -396,6 +403,43 @@ describe('Scale companion', () => {
     expect(get('brewStage').hidden).toBe(false);
     expect(get('startDelay')).toBe(startDelay);
     expect(get('step5Timer').textContent).toBe('~3:00 target');
+  });
+
+  test('selecting a recipe preserves editor disclosures until Continue', () => {
+    get('recipeAdjustments').open = true;
+    get('recipeReference').open = true;
+    get('coffeeDose').value = '15.2';
+    submit('doseForm');
+    expect(get('recipeChoices').open).toBe(true);
+    expect(get('recipeAdjustments').open).toBe(true);
+    expect(get('setupStage').hidden).toBe(true);
+    expect(get('journeyRecipeSummary').textContent).toBe('254 g water · 15.2 g coffee · 1:16.7');
+    expect(doc.querySelectorAll('[data-quick-water][aria-pressed="true"]')).toHaveLength(0);
+    get('btnRecipeNext').click();
+    expect(get('recipeChoices').open).toBe(false);
+    expect(get('setupStage').hidden).toBe(false);
+    expect(doc.activeElement.id).toBe('setupHeading');
+  });
+
+  test('restored custom recipes are compact but require explicit Continue', () => {
+    create({ url: 'http://localhost/?coffee=15.2&water=254' });
+    expect(get('recipeChoices').open).toBe(false);
+    expect(get('recipeAdjustments').open).toBe(false);
+    expect(get('recipeSelection').hidden).toBe(false);
+    expect(get('setupStage').hidden).toBe(true);
+    expect(get('journeyRecipeSummary').textContent).toContain('254 g water');
+    get('btnRecipeNext').click();
+    expect(get('setupStage').hidden).toBe(false);
+    expect(get('coffeeDose').value).toBe('15.2');
+  });
+
+  test('selection announcements do not mutate on every timer tick', () => {
+    startApp();
+    const mutations = new win.MutationObserver(() => {});
+    mutations.observe(get('journeyRecipeSummary'), { childList: true, characterData: true, subtree: true });
+    advance(70);
+    expect(mutations.takeRecords()).toHaveLength(0);
+    mutations.disconnect();
   });
 
   test('successful selection and reset clear obsolete companion warnings', () => {

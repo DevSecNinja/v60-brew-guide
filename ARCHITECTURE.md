@@ -46,12 +46,19 @@ mounted: disclosure uses `hidden` on stage containers and native `<details>` for
 optional content. The full recipe table and the six-step brew grid are secondary
 disclosures rather than competing with the focused action.
 
-`setupConfirmed` and `waterConfirmed` are memory-only preparation gates. New recipe
-selection opens setup; its explicit confirmation reveals water preparation, whose
+`recipeConfirmed`, `setupConfirmed` and `waterConfirmed` are memory-only gates.
+Recipe selection stays in step 2 without closing its editors or moving focus.
+Continue confirms the recipe and reveals setup; setup confirmation reveals water preparation, whose
 confirmation reveals brewing. Changing equipment requires setup confirmation again.
 Reset or Brew another one returns to water preparation. Ratio-only changes preserve
 completed preparation and existing gates when no brew has started. Reload restores
 recipes and preferences, not gates, running clocks or pending results.
+
+Step 2 starts with water presets; ratio/dose editing, saved recipes and the full
+table are closed native disclosures. The compact selected summary is announced
+only when it changes, not on each brew tick. Restored recipes start with the recipe
+editor collapsed and still require Continue. Favorites use native selection
+buttons and keyboard reorder controls with focus retained across re-rendering.
 
 `focusJourneyStage` moves focus to the next stage heading and scrolls it into view
 on explicit transitions, respecting reduced motion. Completion focuses results.
@@ -84,6 +91,8 @@ An `<input type="range">` (1:14 to 1:18, step 0.1) that recalculates the entire 
   Supported water remains 100-500g; invalid combinations produce a visible error.
   Dose-based recipes retain coffee when ratio changes; table recipes retain water.
 Each input event performs one table rebuild with a single favorite-key snapshot.
+Range-rejection feedback is displayed next to the ratio slider without collapsing
+the editor; the last valid recipe is retained.
 URL updates are debounced for slider input, flushed on change/share, and skipped
 when unchanged. Sharing builds the URL directly even if browser address updates fail.
 

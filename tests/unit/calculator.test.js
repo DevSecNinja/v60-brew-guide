@@ -252,9 +252,9 @@ describe('V60 Recipe Calculator — Core Logic', () => {
       expect(stepsGrid.hidden).toBe(true);
     });
 
-    test('no-recipe notice is visible initially', () => {
-      const notice = doc.getElementById('journeyRecipeSummary');
-      expect(notice.textContent).toContain('Choose a water amount');
+    test('water selection is the initial prompt without an empty confirmation', () => {
+      expect(doc.querySelector('#recipeChoices > summary').textContent).toBe('How much water will you use?');
+      expect(doc.getElementById('recipeSelection').hidden).toBe(true);
     });
 
     test('prep step is hidden before recipe selection', () => {

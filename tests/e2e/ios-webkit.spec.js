@@ -179,6 +179,7 @@ test.describe('Zoom prevention', () => {
 test.describe('Ratio slider', () => {
   test('changing the slider updates the coffee column', async ({ page }) => {
     await page.goto('/');
+    await page.locator('#recipeAdjustments > summary').click();
 
     const slider = page.locator('input[type="range"]');
     await expect(slider).toBeVisible();
@@ -215,7 +216,7 @@ test.describe('Ratio slider', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('Brew timer', () => {
-  test('tapping a recipe row reveals setup before the brew stage', async ({ page }) => {
+  test('a selected recipe requires Continue before revealing setup', async ({ page }) => {
     await page.goto('/');
     await page.locator('#recipeReference > summary').click();
 
@@ -223,6 +224,8 @@ test.describe('Brew timer', () => {
     const firstRow = page.locator('table tbody tr').first();
     await firstRow.tap();
 
+    await expect(page.locator('#setupStage')).not.toBeVisible();
+    await page.locator('#btnRecipeNext').click();
     await expect(page.locator('#setupStage')).toBeVisible();
     await expect(page.locator('#brewStage')).not.toBeVisible();
   });
@@ -230,6 +233,7 @@ test.describe('Brew timer', () => {
   test('first brew step becomes available after preparing recipe and water', async ({ page }) => {
     await page.goto('/');
     await page.locator('[data-quick-water="250"]').click();
+    await page.locator('#btnRecipeNext').click();
     await page.locator('#btnSetupReady').click();
     await page.locator('#btnWaterReady').click();
     await page.locator('#allBrewSteps > summary').click();

@@ -25,14 +25,15 @@ A simple, static V60 pour-over coffee brew guide based on [James Hoffmann's Ulti
 The single-page journey follows six numbered stages:
 
 1. **New to V60?** introduces the equipment, without making you configure a scale first.
-2. **Choose your recipe** using a quick water amount, a weighed dose, a favorite,
-   or the collapsible full reference table.
+2. **Choose your recipe** by picking a water amount, reviewing the coffee dose,
+   and choosing *Continue to scale setup*. Ratio/dose adjustments, saved recipes
+   and the full reference table are optional, collapsed sections.
 3. **Prepare your scale and coffee** using one equipment-specific checklist.
 4. **Prepare your water**, optionally using the boil-based cooling timer.
 5. **Brew** with a focused current action; expand *All brew steps* only when needed.
 6. **Record the result** or explicitly skip saving.
 
-Setup appears after recipe selection, water after setup confirmation, and brewing
+Setup appears after *Continue*, water after setup confirmation, and brewing
 after water confirmation. Buttons move focus to the next stage rather than jumping
 to the page top. The introductory dropdown remembers whether you left it open.
 Returning users can continue with their restored recipe or repeat a history entry;
@@ -67,16 +68,23 @@ import, or automatic detection in the app.
 
 Use grams, tare the brewing equipment before weighing coffee, then tare again
 before the first pour. **Do not tare between pours.** Targets mean cumulative
-water poured, not beverage yield. Follow the K112 manual's silicone-pad, dry-port,
-no-use-while-charging, and 2,000g total-load guidance.
+water poured, not beverage yield. Fold, fit and rinse the filter before switching
+on the scale. Follow the K112 manual's silicone-pad, dry-port and
+no-use-while-charging guidance.
 
 ## Dose recipes and history
 
-Enter coffee in 0.1g increments under the ratio slider and choose *Use this dose*.
+Open *Adjust ratio or use weighed coffee* in step 2, enter coffee in 0.1g
+increments and choose *Use this dose*. Selecting or calculating a recipe keeps
+you in step 2 so you can review it before continuing. No default recipe is
+silently selected; 250 g is a recommended water amount, not finished drink volume.
 Water rounds to whole grams and must remain within the existing 100-500g brew
 range. For example, 15.2g at 1:16.7 produces a 254g water target. Changing the ratio
 keeps the dose fixed. Table-selected recipes instead keep water fixed.
 Ratio-only adjustments before brewing preserve completed water preparation.
+*Saved recipes* shows your favorite count and supports keyboard selection and
+Move up / Move down controls as well as drag reordering. Restored shared or
+last-brew recipes show a compact confirmation without changing custom quantities.
 
 After brewing, confirm the dose, enter actual water poured, and confirm or enter
 the finish time as `m:ss`. Notes are optional. Choose *Save brew* or *Skip saving*
