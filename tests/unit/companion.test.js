@@ -41,7 +41,7 @@ describe('Scale companion', () => {
   };
   const history = () => JSON.parse(win.localStorage.getItem('v60_history'));
 
-  function create({ url = 'http://localhost', storage = {} } = {}) {
+  function create({ url = 'http://localhost', storage = {}, notification } = {}) {
     if (dom) dom.window.close();
     now = 1000000;
     errors = [];
@@ -53,6 +53,7 @@ describe('Scale companion', () => {
         window.Date.now = () => now;
         window.scrollTo = () => {};
         window.confirm = () => true;
+        if (notification) window.Notification = notification;
         Object.entries(storage).forEach(([key, value]) => window.localStorage.setItem(key, value));
       }
     });
@@ -605,6 +606,116 @@ describe('Scale companion', () => {
     expect(requestPermission).toHaveBeenCalledTimes(1);
     expect(win.isBrewRunning()).toBe(false);
     await Promise.resolve();
+  });
+
+  test.each(['shared', 'last-brew'])('%s app recipes request notifications on Continue, not initialization', async source => {
+    const requestPermission = jest.fn(() => Promise.resolve('granted'));
+    const notification = { permission: 'default', requestPermission };
+    const options = source === 'shared'
+      ? { url: 'http://localhost/?water=300', notification }
+      : { storage: { v60_last_brew: JSON.stringify({ recipe: { water: 300 }, ratio: 16.7 }) }, notification };
+    create(options);
+    expect(requestPermission).not.toHaveBeenCalled();
+    expect(get('selectedWater').textContent).toBe('300 g');
+    get('btnRecipeNext').click();
+    expect(requestPermission).toHaveBeenCalledTimes(1);
+    expect(win.isBrewRunning()).toBe(false);
+    await Promise.resolve();
+    get('btnSetupReady').click();
+    get('btnWaterReady').click();
+    get('btnFocusAction').click();
+    expect(requestPermission).toHaveBeenCalledTimes(1);
+  });
+
+  test('a dismissed permission request can be retried on a later Continue gesture', async () => {
+    const requestPermission = jest.fn()
+      .mockImplementationOnce(() => win.Promise.resolve('default'))
+      .mockImplementationOnce(() => win.Promise.resolve('granted'));
+    create({ url: 'http://localhost/?water=250', notification: { permission: 'default', requestPermission } });
+    get('btnRecipeNext').click();
+    await Promise.resolve();
+    get('btnRecipeNext').click();
+    await Promise.resolve();
+    expect(requestPermission).toHaveBeenCalledTimes(2);
+    get('btnRecipeNext').click();
+    expect(requestPermission).toHaveBeenCalledTimes(2);
+  });
+
+  test.each(['granted', 'denied'])('Continue respects notification permission already %s', async permission => {
+    const requestPermission = jest.fn();
+    create({ url: 'http://localhost/?water=250', notification: { permission, requestPermission } });
+    get('btnRecipeNext').click();
+    await Promise.resolve();
+    expect(requestPermission).not.toHaveBeenCalled();
+  });
+
+  test.each(['app', 'scale'])('history repeat uses the saved %s timing mode for notification permission', async timer => {
+    change('timerSource', timer);
+    if (timer === 'app') {
+      finishApp();
+    } else {
+      select();
+      get('btnFocusAction').click();
+      get('btnFocusAction').click();
+      get('resultTime').value = '3:15';
+    }
+    save();
+    change('timerSource', timer === 'app' ? 'scale' : 'app');
+    const requestPermission = jest.fn(() => Promise.resolve('granted'));
+    win.Notification = { permission: 'default', requestPermission };
+    doc.querySelector('[data-history-repeat]').click();
+    expect(get('timerSource').value).toBe(timer);
+    expect(requestPermission).toHaveBeenCalledTimes(timer === 'app' ? 1 : 0);
+    expect(win.isBrewRunning()).toBe(false);
+    await Promise.resolve();
+  });
+
+  test('invalid history restoration neither changes setup nor requests notification permission', () => {
+    finishApp();
+    save();
+    change('timerSource', 'scale');
+    const saved = history();
+    saved[0].recipe.water = 600;
+    win.localStorage.setItem('v60_history', JSON.stringify(saved));
+    const requestPermission = jest.fn();
+    win.Notification = { permission: 'default', requestPermission };
+    doc.querySelector('[data-history-repeat]').click();
+    expect(get('timerSource').value).toBe('scale');
+    expect(requestPermission).not.toHaveBeenCalled();
+    expect(get('storageWarning').hidden).toBe(false);
+  });
+
+  test.each([
+    undefined, null, '', 'not-a-number', 'Infinity', 0, -15.2, 15.25, 15, [15.2], {}
+  ])('invalid stored dose %p is excluded without losing usable favorites', coffee => {
+    const favorites = [
+      { key: '16.7:250', ratio: '16.7', water: 250, coffee: '15.0' },
+      { key: 'invalid-dose', ratio: '16.7', water: 254, basis: 'dose', coffee }
+    ];
+    create({ storage: { v60_favorites: JSON.stringify(favorites) } });
+    expect(win.loadFavorites()).toHaveLength(1);
+    expect(get('favoritesSummary').textContent).toBe('Saved recipes (1)');
+    expect(get('storageWarning').hidden).toBe(false);
+    expect(get('favoritesList').textContent).not.toContain('undefinedg');
+    doc.querySelector('.btn-select-favorite').click();
+    expect(get('selectedWater').textContent).toBe('250 g');
+  });
+
+  test.each(['unsupported', null, false])('unsupported favorite basis %p is excluded', basis => {
+    create({ storage: { v60_favorites: JSON.stringify([{ key: 'invalid-basis', water: 254, ratio: '16.7', coffee: '15.2', basis }]) } });
+    expect(win.loadFavorites()).toHaveLength(0);
+    expect(get('favoritesSection').hidden).toBe(true);
+    expect(get('storageWarning').hidden).toBe(false);
+  });
+
+  test.each([15.2, '15.2'])('valid dose favorite with coffee %p remains selectable and exact', coffee => {
+    create({ storage: { v60_favorites: JSON.stringify([{ key: '16.7:254:dose:15.2', water: 254, ratio: '16.7', coffee, basis: 'dose' }]) } });
+    expect(win.loadFavorites()).toHaveLength(1);
+    expect(get('storageWarning').hidden).toBe(true);
+    doc.querySelector('.btn-select-favorite').click();
+    expect(get('selectedWater').textContent).toBe('254 g');
+    expect(get('selectedCoffee').textContent).toBe('15.2 g');
+    expect(new URL(win.location.href).searchParams.get('coffee')).toBe('15.2');
   });
 
   test('conflicting share parameters explain why dose determines water', () => {

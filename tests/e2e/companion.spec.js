@@ -11,6 +11,8 @@ test.describe('Scale companion on mobile', () => {
   test.use({ serviceWorkers: 'block' });
 
   test.beforeEach(async ({ page }) => {
+    await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
+    await page.clock.pauseAt(new Date('2026-01-01T00:00:01Z'));
     await page.goto('/');
   });
 
@@ -27,11 +29,30 @@ test.describe('Scale companion on mobile', () => {
     await expect(page.locator('#btnFavoriteRecipe')).toHaveText('Remove favorite');
   });
 
+  test('a shared recipe requests notification permission only from the Continue gesture', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.notificationRequests = [];
+      Object.defineProperty(window, 'Notification', {
+        configurable: true,
+        value: class {
+          static permission = 'default';
+          static async requestPermission() {
+            window.notificationRequests.push(navigator.userActivation.isActive);
+            return 'granted';
+          }
+        }
+      });
+    });
+    await page.goto('/?water=300');
+    expect(await page.evaluate(() => window.notificationRequests)).toEqual([]);
+    await page.locator('#btnRecipeNext').click();
+    expect(await page.evaluate(() => window.notificationRequests)).toEqual([true]);
+    expect(await page.evaluate(() => isBrewRunning())).toBe(false);
+  });
+
   test('app clock catches up and waits for a real drawdown finish', async ({ page }, testInfo) => {
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
-    await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
-    await page.clock.pauseAt(new Date('2026-01-01T00:00:01Z'));
     await page.locator('[data-quick-water="250"]').click();
     await page.locator('#btnRecipeNext').click();
     await page.locator('#scaleType').selectOption('k112');
@@ -102,8 +123,6 @@ test.describe('Scale companion on mobile', () => {
   });
 
   test('countdown start excludes preparation from elapsed brew time', async ({ page }) => {
-    await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
-    await page.clock.pauseAt(new Date('2026-01-01T00:00:01Z'));
     await page.locator('[data-quick-water="250"]').click();
     await prepareWater(page);
     await page.locator('#btnFocusAction').click();
@@ -138,7 +157,6 @@ test.describe('Scale companion on mobile', () => {
     await expect(page.locator('#allBrewSteps')).not.toHaveAttribute('open', '');
     await page.locator('#btnFocusAction').click();
     await page.locator('#btnFocusAction').click();
-    await page.clock.install();
     await page.clock.fastForward(195000);
     await page.locator('#btnFocusAction').click();
     await expect(page.locator('#resultHeading')).toBeFocused();

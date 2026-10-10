@@ -2506,10 +2506,23 @@
         reportStorageError(new Error('Invalid favorites'));
         return [];
       }
-      const valid = saved.filter(favorite => favorite && typeof favorite === 'object' &&
-        !Array.isArray(favorite) && typeof favorite.key === 'string' &&
-        Number.isInteger(favorite.water) && favorite.water >= 100 && favorite.water <= 500 &&
-        parseRatioParam(favorite.ratio) !== null);
+      const valid = saved.filter(favorite => {
+        if (!favorite || typeof favorite !== 'object' || Array.isArray(favorite) ||
+            typeof favorite.key !== 'string' || !Number.isInteger(favorite.water) ||
+            favorite.water < 100 || favorite.water > 500 ||
+            ![undefined, 'water', 'dose'].includes(favorite.basis)) return false;
+        const ratio = parseRatioParam(favorite.ratio);
+        if (ratio === null) return false;
+        if (favorite.basis === 'dose') {
+          if (!['number', 'string'].includes(typeof favorite.coffee)) return false;
+          try {
+            makeRecipe(favorite.water, ratio, Number(favorite.coffee));
+          } catch {
+            return false;
+          }
+        }
+        return true;
+      });
       if (valid.length !== saved.length) reportStorageError(new Error('Unreadable favorite entries were excluded; valid favorites remain available'));
       return valid;
     }
@@ -2941,6 +2954,9 @@
       byId('recipeChoices').open = false;
       renderJourney();
       focusJourneyStage('setupHeading');
+      // Continue is a user gesture for shared, last-brew and repeated recipes too.
+      // Keep the permission prompt separate from the brew-start wake-lock request.
+      if (notificationPermission === 'default' && brewSetup.timer === 'app') requestNotificationPermission();
     }
 
     function showRecipeConfirmation() {
@@ -3818,14 +3834,6 @@
       renderFavorites();
       renderFavoriteButton();
 
-      // Ask for notification permission here (still inside the user gesture
-      // that selected the recipe) rather than on the brew-start tap. On iOS
-      // PWAs, surfacing a permission prompt in the same gesture as the
-      // wake-lock request causes the wake lock to be released immediately
-      // after it is granted, so the screen turns off during brewing.
-      if (notificationPermission === 'default' && brewSetup.timer === 'app') {
-        requestNotificationPermission();
-      }
     }
 
     // --- Brew step logic ---
@@ -4350,7 +4358,7 @@
           // (e.g. Notification.requestPermission) in the same gesture causes
           // the document to lose focus and the wake-lock sentinel to be
           // released immediately after it is granted. Notification permission
-          // is requested earlier, on recipe selection.
+          // is requested earlier, on Continue or a timing-mode change.
           requestWakeLock();
         }
 

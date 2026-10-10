@@ -164,6 +164,14 @@ the existing ratio/water URL format. Dose favorites have an additional dose key
 suffix, preserving legacy water/ratio favorite keys without collisions. Legacy
 favorites and last brews are restored as water-first recipes. Invalid favorite
 entries are filtered with a visible warning rather than aborting initialization.
+Dose favorites must have a supported basis and a finite 0.1g coffee amount that
+reproduces their whole-gram water target at the saved ratio.
+
+Recipe restoration itself never requests notification permission. Continue
+requests permission for app-timed recipes on an explicit gesture, after history
+repeat has restored the saved setup. Switching from scale timing to app timing
+also requests permission. Neither path shares the brew-start gesture, avoiding
+the iOS wake-lock/permission interaction.
 
 Completing a brew snapshots its recipe, equipment/mode, timing source and estimated
 temperature target. The result form requires actual water and a valid `m:ss` time;
