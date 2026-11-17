@@ -452,6 +452,49 @@ describe('service worker cache strategy', () => {
     await expect(cachedResponse.text()).resolves.toBe('network-icon');
   });
 
+  test.each([
+    'https://fonts.googleapis.com/css2?family=Inter',
+    'https://fonts.gstatic.com/s/inter/v13/font.woff2',
+  ])('Google Fonts requests (%s) are cache-first and cached', async (url) => {
+    const request = createRequest(url, { mode: 'cors', destination: 'font' });
+    const networkFont = new MockResponse('network-font');
+    const harness = createServiceWorkerHarness({
+      initialCaches: { [CACHE_NAME]: {} },
+      fetchImpl: async () => networkFont,
+    });
+
+    const response = await dispatchFetch(harness, request);
+
+    expect(response).toBe(networkFont);
+    expect(harness.currentCache().put).toHaveBeenCalledWith(request, expect.any(MockResponse));
+
+    const cachedResponse = await dispatchFetch(harness, request);
+
+    await expect(cachedResponse.text()).resolves.toBe('network-font');
+    expect(harness.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test.each([
+    'https://fonts.googleapis.com.evil.example/css2?family=Inter',
+    'https://fonts.gstatic.com.evil.example/font.woff2',
+    'https://fonts.googleapis.com@evil.example/css2',
+    'http://fonts.googleapis.com/css2?family=Inter',
+  ])('lookalike font URLs (%s) are passed through, never cached', async (url) => {
+    const request = createRequest(url, { mode: 'cors', destination: 'font' });
+    const networkResponse = new MockResponse('untrusted');
+    const harness = createServiceWorkerHarness({
+      initialCaches: { [CACHE_NAME]: {} },
+      fetchImpl: async () => networkResponse,
+    });
+
+    const response = await dispatchFetch(harness, request);
+
+    expect(response).toBe(networkResponse);
+    expect(harness.fetch).toHaveBeenCalledWith(request);
+    expect(harness.caches.match).not.toHaveBeenCalled();
+    expect(harness.currentCache().put).not.toHaveBeenCalled();
+  });
+
   test('manifest.json is network-first with a cached fallback', async () => {
     const request = createRequest('https://example.com/manifest.json', {
       destination: 'manifest',
