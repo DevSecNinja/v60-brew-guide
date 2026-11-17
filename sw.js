@@ -26,6 +26,12 @@ const OPTIONAL_ASSETS_TO_CACHE = ASSETS_TO_CACHE.filter(
 const FONT_URLS = [
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'
 ];
+// Origins served cache-first. Compared exactly: a prefix check would also
+// match lookalike hosts such as https://fonts.googleapis.com.evil.example.
+const FONT_ORIGINS = [
+  'https://fonts.googleapis.com',
+  'https://fonts.gstatic.com'
+];
 
 // Handle messages from clients
 self.addEventListener('message', (event) => {
@@ -86,6 +92,10 @@ self.addEventListener('activate', (event) => {
 
 function isSameOriginRequest(request) {
   return new URL(request.url).origin === self.location.origin;
+}
+
+function isFontRequest(request) {
+  return FONT_ORIGINS.indexOf(new URL(request.url).origin) !== -1;
 }
 
 function isSuccessfulResponse(response) {
@@ -199,10 +209,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   // For Google Fonts: cache-first with network fallback
-  if (
-    request.url.startsWith('https://fonts.googleapis.com') ||
-    request.url.startsWith('https://fonts.gstatic.com')
-  ) {
+  if (isFontRequest(request)) {
     event.respondWith(
       caches.match(request).then((cached) => {
         if (cached) return cached;
