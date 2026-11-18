@@ -1,0 +1,10 @@
+# Default shell dialect; individual scripts override this via their shebang
+shell=bash
+
+# Error severity: error, warning, info, style (default: style — show everything)
+severity=style
+
+# Enable optional checks not on by default. check-extra-masked-returns (SC2312)
+# and check-set-e-suppressed (SC2310/SC2311) are left out: they flag the x=$(cmd)
+# and if my_function; then idioms that shell libraries use on purpose.
+enable=add-default-case,avoid-nullary-conditions,deprecate-which,quote-safe-variables,require-variable-braces

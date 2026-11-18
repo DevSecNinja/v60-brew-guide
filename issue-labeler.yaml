@@ -1,0 +1,50 @@
+---
+# Rules for github/issue-labeler v3 (see .github/workflows/labeler.yml).
+#
+# - Write case-insensitive patterns as '/pattern/i'. The action builds a
+#   JavaScript RegExp, which rejects inline flags such as '(?i)'.
+# - The action ANDs the entries listed under a label, so each label has one
+#   pattern and "either/or" lives in a single alternation.
+# - The issue title and body are matched together, title first. Without the
+#   'm' flag, '^' anchors at the start of the title.
+#
+# Tests: tests/issue-labeler-config.py
+
+# Conventional Commit type prefix, or a keyword (from cog/cliff config)
+feat:
+  - '/^feat(\(.+\))?!?:|\b(feature request|enhancement|add support|would be (nice|great))/i'
+
+fix:
+  - '/^fix(\(.+\))?!?:|\b(errors?|crash(es|ed|ing)?|fail(s|ed|ing|ures?)?|broken|not work(s|ing)?|doesn.t work|bugs?)\b/i'
+
+perf:
+  - '/^perf(\(.+\))?!?:/i'
+
+refactor:
+  - '/^refactor(\(.+\))?!?:/i'
+
+docs:
+  - '/^docs(\(.+\))?!?:|\b(docs?|readme|wiki|guides?|tutorials?|documentation)\b/i'
+
+ci:
+  - '/^ci(\(.+\))?!?:|\b(github actions?|workflows?|pipelines?)\b|\.github\b/i'
+
+chore:
+  - '/^chore(\(.+\))?!?:/i'
+
+# Area labels
+area/apps:
+  - '/\b(apps?|services?|containers?)\b|\bdocker/i'
+
+area/github:
+  - '/\b(github actions?|workflows?|ci|pipelines?)\b|\.github\b/i'
+
+area/renovate:
+  - '/\b(renovate|dependenc|update.*package|package.*update)/i'
+
+area/scripts:
+  - '/\b(scripts?|automation|bash|shell)\b|\bcron/i'
+
+# General: a question mark in the title, or a question keyword
+question:
+  - '/^[^\n]*\?|\b(how (do|to|can)|question)\b/i'
