@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   pages:
-    uses: DevSecNinja/.github/.github/workflows/pages.yml@27fd66740c629ea38380dcd3bf93e7bc74c54247 # v1.9.0
+    uses: DevSecNinja/.github/.github/workflows/pages.yml@0ade604cb8c4e8c3e34911374613ca7b91c2128f # v4.11.0
     permissions:
       contents: read
       deployments: write
@@ -42,6 +42,9 @@ jobs:
         npm run test:html
         npm run test:a11y
         npm run test:e2e
+      # jest.config.js and playwright.config.js write JUnit XML here in CI.
+      test-report-paths: junit/*.xml
+      test-report-title: jest and Playwright
       update-sitemap-lastmod: true
       # Optional Cloudflare production instead of GitHub Pages:
       # github-pages: false
