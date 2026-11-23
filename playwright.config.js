@@ -24,7 +24,8 @@ module.exports = defineConfig({
   // initialisation doesn't mask real failures.
   retries: process.env.CI ? 1 : 0,
   workers: 1,
-  reporter: 'list',
+  // CI also writes JUnit XML for the Pages test report.
+  reporter: process.env.CI ? [['list'], ['junit', { outputFile: 'junit/e2e.xml' }]] : 'list',
 
   use: {
     // All e2e tests share a single base URL served by the built-in
